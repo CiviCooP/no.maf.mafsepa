@@ -3,6 +3,52 @@
 require_once 'mafsepa.civix.php';
 
 /**
+ * Add a bit of Javascript Code to the Create Mandate page to hide the Reference Field.
+ * @param $page
+ */
+function mafsepa_civicrm_pageRun(&$page) {
+  $pageName = $page->getVar('_name');
+  if ($pageName == 'CRM_Sepa_Page_CreateMandate') {
+    // Add some javascript to the create mandate screen to hide mandate
+    // reference and to change the text EUR to NOK as we will force the
+    // recurring contributions or contributions to be in the NOK currency.
+    // (See for this functionality the pre hook).
+    $resources = CRM_Core_Resources::singleton();
+    $resources->addScript("
+      cj(function() {
+        cj('input[name=\"reference\"]').parent().parent().hide();
+        var amountCurrencyNode = cj('input[name=\"total_amount\"]').parent().contents().filter(function() {
+          if (this.nodeType == Node.TEXT_NODE) {
+            this.nodeValue = ' NOK';
+          }
+          return this.nodeType == Node.TEXT_NODE;
+        });
+      });
+    ");
+  }
+}
+
+function mafsepa_civicrm_pre($op, $objectName, $id, &$params) {
+  if ($op == 'create' && empty($id)) {
+    // We only want to force the currency to NOK when the contribution recur or
+    // the contribution is created by the user through the create mandate screen.
+    // In all other scenario's there is no need to change the currency.
+    //
+    // The only we to detect we are creating contribution recur or contributions
+    // from within the create mandate screen is to check which url we are on.
+    $requestValues = CRM_Utils_Request::exportValues();
+    if (isset($requestValues['q']) && $requestValues['q'] == 'civicrm/sepa/cmandate') {
+      if ($objectName == 'ContributionRecur' && !empty($params['currency']) && $params['currency'] == 'EUR') {
+        $params['currency'] = 'NOK';
+      }
+      elseif ($objectName == 'Contribution' && !empty($params['currency']) && $params['currency'] == 'EUR') {
+        $params['currency'] = 'NOK';
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_civicrm_config().
  *
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_config
