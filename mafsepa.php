@@ -3,6 +3,21 @@
 require_once 'mafsepa.civix.php';
 
 /**
+ * Implementation of civicrm_hook apiWrappers
+ * If API entity = SepaMandate and API action = createfull call apiWrapper to process bank_account
+ *
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 8 Feb 2017
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_apiWrappers
+ * @param $wrappers
+ * @param $apiRequest
+ */
+function mafsepa_civicrm_apiWrappers(&$wrappers, $apiRequest) {
+  if ($apiRequest['entity'] == 'SepaMandate' && $apiRequest['action'] == 'createfull') {
+    $wrappers[] = new CRM_Mafsepa_APIWrapper();
+  }
+}
+/**
  * Add a bit of Javascript Code to the Create Mandate page to hide the Reference Field.
  * @param $page
  */
