@@ -28,6 +28,8 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
       }
       civicrm_api3('WordReplacement', 'create', $params);
     }
+    // replace url for menu option SEPA dashboard to MAF AvtaleGiro dashboard
+    new CRM_Mafsepa_AvtaleGiro();
   }
 
   public function uninstall() {

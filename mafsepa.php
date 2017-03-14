@@ -4,7 +4,6 @@ require_once 'mafsepa.civix.php';
 
 /**
  * Implementation of civicrm_hook apiWrappers
- * If API entity = SepaMandate and API action = createfull call apiWrapper to process bank_account
  *
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
  * @date 8 Feb 2017
@@ -13,7 +12,8 @@ require_once 'mafsepa.civix.php';
  * @param $apiRequest
  */
 function mafsepa_civicrm_apiWrappers(&$wrappers, $apiRequest) {
-  if ($apiRequest['entity'] == 'SepaMandate' && $apiRequest['action'] == 'createfull') {
+  $validEntities = array('SepaMandate', 'SepaTransactionGroup');
+  if (in_array($apiRequest['entity'], $validEntities)) {
     $wrappers[] = new CRM_Mafsepa_APIWrapper();
   }
 }

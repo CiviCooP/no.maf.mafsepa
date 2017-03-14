@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<menu>
+  <item>
+    <path>civicrm/mafsepa/closegroup</path>
+    <page_callback>CRM_Mafsepa_Page_CloseGroup</page_callback>
+    <title>CloseGroup</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/sepa</path>
+    <page_callback>CRM_Mafsepa_Page_DashBoard</page_callback>
+    <title>AvtaleGiro Dashboard</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
+    <path>civicrm/sepa/ocr</path>
+    <page_callback>CRM_Mafsepa_Page_AvtaleGiroFile</page_callback>
+    <title>AvtaleGiro File</title>
+    <access_arguments>access CiviContribute</access_arguments>
+  </item>
+</menu>
