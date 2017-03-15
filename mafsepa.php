@@ -3,6 +3,22 @@
 require_once 'mafsepa.civix.php';
 
 /**
+ * Method to check if the extension org.project60.sepa is installed
+ *
+ * @return bool
+ */
+function _is_sepa_installed() {
+  $sql = "SELECT COUNT(*) FROM civicrm_extension WHERE full_name = %1 AND is_active = %2";
+  $countSepa = CRM_Core_DAO::singleValueQuery($sql, array(
+    1 => array('org.project60.sepa', 'String'),
+    2 => array(1, 'Integer')
+  ));
+  if ($countSepa == 1) {
+    return TRUE;
+  }
+  return FALSE;
+}
+/**
  * Implementation of civicrm_hook apiWrappers
  *
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
@@ -87,6 +103,9 @@ function mafsepa_civicrm_xmlMenu(&$files) {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_install
  */
 function mafsepa_civicrm_install() {
+  if (_is_sepa_installed() == FALSE) {
+    throw new Exception(ts('Required extension SEPA Direct Debit (org.project60.sepa) is not installed, can not enable extension no.maf.mafsepa'));
+  }
   _mafsepa_civix_civicrm_install();
 }
 
@@ -114,6 +133,9 @@ function mafsepa_civicrm_uninstall() {
  * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_enable
  */
 function mafsepa_civicrm_enable() {
+  if (_is_sepa_installed() == FALSE) {
+    throw new Exception(ts('Required extension SEPA Direct Debit (org.project60.sepa) is not installed, can not enable extension no.maf.mafsepa'));
+  }
   _mafsepa_civix_civicrm_enable();
 }
 

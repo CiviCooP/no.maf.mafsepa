@@ -40,10 +40,6 @@ class CRM_Mafsepa_AvtaleGiro {
   private $_membershipExternalRef = NULL;
   private $_defaultExternalRef = NULL;
   private $_countRecords = NULL;
-  private $_avtaleGiroCustomGroup = NULL;
-  private $_avBankAccountCustomField = NULL;
-  private $_avMaxAmountCustomField = NULL;
-  private $_avNotificationCustomField = NULL;
 
   /**
    * CRM_Mafsepa_AvtaleGiro constructor.
@@ -110,11 +106,11 @@ class CRM_Mafsepa_AvtaleGiro {
       $txContributions = civicrm_api3('SepaContributionGroup', 'get', array('txgroup_id' => $txGroupId));
       if (!empty($txContributions['values'])) {
         // start assignment for contributions
-        $this->writeAssignmentStartLine('contribution');
+        $this->writeAssignmentStartLine();
         foreach ($txContributions['values'] as $txContribution) {
           $this->writeContributionLine($txContribution);
         }
-        $this->writeAssignmentEndLine('contribution');
+        $this->writeAssignmentEndLine();
       }
       $this->writeFileEndLine();
     } catch (CiviCRM_API3_Exception $ex) {
@@ -138,23 +134,46 @@ class CRM_Mafsepa_AvtaleGiro {
     try {
       $contribution = civicrm_api3('Contribution', 'getsingle', array(
         'id' => $txContribution['contribution_id']));
-      // use default campaign 1 if no campaign found
-      if (!isset($contribution['contribution_campaign_id'])) {
-        $contribution['contribution_campaign_id'] = 1;
+      // retrieve the avtale giro agreement for this contribution
+      $avtaleGiroContract = $this->getAvtaleGiroContract($contribution);
+      // validate if the amount is not bigger than the max amount of the avtale giro, and only process if
+      // it is not!
+      if ($this->isValidAmount($avtaleGiroContract, $contribution) == TRUE) {
+        // use default campaign 1 if no campaign found
+        if (!isset($contribution['contribution_campaign_id'])) {
+          $contribution['contribution_campaign_id'] = 1;
+        }
+        $transactionType = $this->getTransactionType($avtaleGiroContract);
+        // write first contribution line
+        $this->writeContributionFirstLine($transactionNumber, $transactionType, $contribution);
+        // write second contribution line
+        $this->writeContributionSecondLine($transactionNumber, $transactionType, $contribution);
+        // keep running total for assignment
+        $this->_assignmentTotal += (float)$contribution['total_amount'];
+        $this->_fileTotal += (float)$contribution['total_amount'];
+        // save earliest and latest date for assignment
+        $this->checkEarliestAndLatestDate($contribution['receive_date']);
       }
-      $transactionType = $this->getTransactionType($contribution['id']);
-      // write first contribution line
-      $this->writeContributionFirstLine($transactionNumber, $transactionType, $contribution);
-      // write second contribution line
-      $this->writeContributionSecondLine($transactionNumber, $transactionType, $contribution);
-      // keep running total for assignment
-      $this->_assignmentTotal += (float) $contribution['total_amount'];
-      $this->_fileTotal += (float) $contribution['total_amount'];
-      // save earliest and latest date for assignment
-      $this->checkEarliestAndLatestDate($contribution['receive_date']);
     } catch (CiviCRM_API3_Exception $ex) {
-      // todo add logger
+      $message = ts('No contribution found in the database!').' '.ts('Contact your system administrator');
+      $this->createActivity('error', $message, array('contribution_id in transaction group' => $txContribution['contribution_id']));
     }
+  }
+
+  /**
+   * Method to create a warning or error activity
+   *
+   * @param string $type
+   * @param string $message
+   * @param array $details
+   */
+  private function createActivity($type, $message, $details) {
+    $activity = new CRM_Mafsepa_Activity();
+    $activity->create(array(
+      'subject' => 'OCR Export '.ucfirst($type),
+      'message' => $message,
+      'details' => $details
+    ));
   }
 
   /**
@@ -188,14 +207,90 @@ class CRM_Mafsepa_AvtaleGiro {
       $this->_latestDate = $inDate;
     }
   }
+
+  /**
+   * Method to get the AvtaleGiro contract based on bank account
+   *
+   * @param array $contribution
+   * @return array $avtaleGiro
+   *
+   */
+  private function getAvtaleGiroContract($contribution) {
+    $avtaleGiro = array();
+    if (CRM_Core_DAO::checkTableExists('civicrm_avtale_banking')) {
+      // first get bank account from recurring contribution / mandate
+      if (isset($contribution['contribution_recur_id']) && !empty($contribution['contribution_recur_id'])) {
+        try {
+          $bankAccount = civicrm_api3('SepaMandate', 'getvalue', array(
+            'entity_table' => 'civicrm_contribution_recur',
+            'entity_id' => $contribution['contribution_recur_id'],
+            'return' => 'iban'
+          ));
+          if (!empty($bankAccount)) {
+            $sql = "SELECT av.* FROM civicrm_bank_account_reference ref
+              LEFT JOIN civicrm_avtale_banking av ON ref.ba_id = av.ba_id WHERE reference = %1";
+            $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($bankAccount, 'String')));
+            if ($dao->fetch()) {
+              $avtaleGiro['ba_id'] = $dao->ba_id;
+              $avtaleGiro['maximum_amount'] = $dao->maximum_amount;
+              $avtaleGiro['notification_to_bank'] = $dao->notification_to_bank;
+            } else {
+              // create warning activity
+              $message = ts('No Avtale Giro contract details found for contribution');
+              $details = array(
+                'contribution id' => $contribution['id'],
+                'receive date' => $contribution['receive date'],
+                'amount' => $contribution['total_amount'],
+                'contact id' => $contribution['contact_id'],
+                'bank account' => $bankAccount
+              );
+              $this->createActivity('warning', $message, $details);
+            }
+          } else {
+            $message = ts('Empty bank account in recurring contribution/sepa mandate for contribution');
+            $details = array(
+              'contribution id' => $contribution['id'],
+              'receive date' => $contribution['receive date'],
+              'amount' => $contribution['total_amount'],
+              'contact id' => $contribution['contact_id'],
+            );
+            $this->createActivity('warning', $message, $details);
+          }
+        } catch (CiviCRM_API3_Exception $ex) {
+          $message = ts('No sepa mandate found for contribution');
+          $details = array(
+            'contribution id' => $contribution['id'],
+            'receive date' => $contribution['receive date'],
+            'amount' => $contribution['total_amount'],
+            'contact id' => $contribution['contact_id'],
+          );
+          $this->createActivity('error', $message, $details);
+        }
+      } else {
+        $message = ts('No recurring contribution mandate found in contribution');
+        $details = array(
+          'contribution id' => $contribution['id'],
+          'receive date' => $contribution['receive date'],
+          'amount' => $contribution['total_amount'],
+          'contact id' => $contribution['contact_id'],
+        );
+        $this->createActivity('error', $message, $details);
+      }
+    }
+    return $avtaleGiro;
+  }
+
   /**
    * Method to get the transaction type for a contribution line based on the notification on the avtale giro
    *
-   * @param $contributionId
-   * @return $transactionType
+   * @param array $avtaleGiroContract
+   * @return string $transactionType
    */
-  private function getTransactionType($contributionId) {
+  private function getTransactionType($avtaleGiroContract) {
     $transactionType = $this->_withoutNotificationTransactionType;
+    if (isset($avtaleGiroContract['notification_to_bank']) && $avtaleGiroContract['notification_to_bank'] == 1) {
+      $transactionType = $this->_withNotificationTransactionType;
+    }
     return (string) $transactionType;
   }
 
@@ -209,24 +304,36 @@ class CRM_Mafsepa_AvtaleGiro {
   private function writeContributionFirstLine($transactionNumber, $transactionType, $contribution) {
     $contributionDate = date('dmy', strtotime($contribution['receive_date']));
     $contributionAmount = str_pad((float) $contribution['total_amount'] * 100, 17, 0, STR_PAD_LEFT);
-    $contributionKid = civicrm_api3('Kid', 'generate', array(
-      'contribution_id' => $contribution['id'],
-      'campaign_id' => $contribution['contribution_campaign_id'],
-      'contact_id' => $contribution['contact_id']
-    ));
-    $this->_countRecords++;
-    $this->_fileLines[] = implode('', array(
-      $this->_formatCode,
-      $this->_avtaleGiroServiceCode,
-      $transactionType,
-      $this->_firstContributionLineRecordType,
-      $transactionNumber,
-      $contributionDate,
-      str_pad('', 11),
-      $contributionAmount,
-      str_pad($contributionKid['kid_number'], 25, ' ', STR_PAD_LEFT),
-      str_pad(0, 6, 0)
-    ));
+    try {
+      $contributionKid = civicrm_api3('Kid', 'generate', array(
+        'contribution_id' => $contribution['id'],
+        'campaign_id' => $contribution['contribution_campaign_id'],
+        'contact_id' => $contribution['contact_id']
+      ));
+      $this->_countRecords++;
+      $this->_fileLines[] = implode('', array(
+        $this->_formatCode,
+        $this->_avtaleGiroServiceCode,
+        $transactionType,
+        $this->_firstContributionLineRecordType,
+        $transactionNumber,
+        $contributionDate,
+        str_pad('', 11),
+        $contributionAmount,
+        str_pad($contributionKid['kid_number'], 25, ' ', STR_PAD_LEFT),
+        str_pad(0, 6, 0)
+      ));
+    } catch (CiviCRM_API3_Exception $ex) {
+      $message = ts('Could not generate a KID for contribution, collection cancelled');
+      $details = array(
+        'contribution id' => $contribution['id'],
+        'campaign id' => $contribution['contribution_campaign_id'],
+        'receive date' => $contribution['receive date'],
+        'amount' => $contribution['total_amount'],
+        'contact id' => $contribution['contact_id'],
+      );
+      $this->createActivity('error', $message, $details);
+    }
   }
 
   /**
@@ -244,7 +351,15 @@ class CRM_Mafsepa_AvtaleGiro {
       $lastName = @iconv("UTF-8", "ASCII//IGNORE", mb_substr($contact->last_name, 0, 5));
       $abbreviatedName = str_pad($firstName . $lastName, 10);
     } else {
-      // todo add logger
+      $message = ts('Could not find a contact for contribution, collection still going ahead without name');
+      $details = array(
+        'contribution id' => $contribution['id'],
+        'campaign id' => $contribution['contribution_campaign_id'],
+        'receive date' => $contribution['receive date'],
+        'amount' => $contribution['total_amount'],
+        'contact id' => $contribution['contact_id'],
+      );
+      $this->createActivity('warning', $message, $details);
       $abbreviatedName = '';
     }
     $externalRef = $this->getExternalRef($contribution['financial_type_id']);
@@ -281,53 +396,45 @@ class CRM_Mafsepa_AvtaleGiro {
 
   /**
    * Method to write an assignment start line
-   *
-   * @param $type
    */
-  private function writeAssignmentStartLine($type) {
+  private function writeAssignmentStartLine() {
     $this->_assignmentCount = 0;
     $this->_assignmentTotal = 0;
-    if ($type == 'contribution') {
-      $this->_countRecords++;
-      $this->_fileLines[] = implode('', array(
-        $this->_formatCode,
-        $this->_avtaleGiroServiceCode,
-        $this->_startTransmissionType,
-        $this->_assignmentRecordType,
-        str_pad(0, 9, 0),
-        $this->_assignmentNumber,
-        $this->_assignmentAccount,
-        str_pad(0, 45, 0),
-      ));
-    }
+    $this->_countRecords++;
+    $this->_fileLines[] = implode('', array(
+      $this->_formatCode,
+      $this->_avtaleGiroServiceCode,
+      $this->_startTransmissionType,
+      $this->_assignmentRecordType,
+      str_pad(0, 9, 0),
+      $this->_assignmentNumber,
+      $this->_assignmentAccount,
+      str_pad(0, 45, 0),
+    ));
   }
 
   /**
    * Method to write the assignment end line
-   *
-   * @param $type
    */
-  private function writeAssignmentEndLine($type) {
-    if ($type == 'contribution') {
-      $countTransactions = str_pad($this->_assignmentCount, 8, 0, STR_PAD_LEFT);
-      // each contribution * 2 (2 lines each) + start and end assignment
-      $countRecords = ($this->_assignmentCount * 2) + 2;
-      $assignmentTotal = $this->_assignmentTotal * 100;
-      $assignmentTotal = str_pad($assignmentTotal, 17, 0, STR_PAD_LEFT);
-      $this->_countRecords++;
-      $this->_fileLines[] = implode('', array(
-        $this->_formatCode,
-        $this->_avtaleGiroServiceCode,
-        $this->_endTransmissionType,
-        $this->_endAssignmentLineRecordType,
-        $countTransactions,
-        $countRecords,
-        $assignmentTotal,
-        date('dmy', strtotime($this->_earliestDate)),
-        date('dmy', strtotime($this->_latestDate)),
-        str_pad(0, 27, 0),
-      ));
-    }
+  private function writeAssignmentEndLine() {
+    $countTransactions = str_pad($this->_assignmentCount, 8, 0, STR_PAD_LEFT);
+    // each contribution * 2 (2 lines each) + start and end assignment
+    $countRecords = ($this->_assignmentCount * 2) + 2;
+    $assignmentTotal = $this->_assignmentTotal * 100;
+    $assignmentTotal = str_pad($assignmentTotal, 17, 0, STR_PAD_LEFT);
+    $this->_countRecords++;
+    $this->_fileLines[] = implode('', array(
+      $this->_formatCode,
+      $this->_avtaleGiroServiceCode,
+      $this->_endTransmissionType,
+      $this->_endAssignmentLineRecordType,
+      $countTransactions,
+      $countRecords,
+      $assignmentTotal,
+      date('dmy', strtotime($this->_earliestDate)),
+      date('dmy', strtotime($this->_latestDate)),
+      str_pad(0, 27, 0),
+    ));
   }
 
   /**
@@ -349,5 +456,32 @@ class CRM_Mafsepa_AvtaleGiro {
       date('dmy', strtotime($this->_earliestDate)),
       str_pad(0, 33, 0),
     ));
+  }
+
+  /**
+   * Method to check if the amount in the contribution is valid against the maximum amount in the avtale giro
+   * agreement. If it is NOT, generate warning activity and return FALSE
+   *
+   * @param array $avtaleGiroContract
+   * @param array $contribution
+   * @return bool
+   */
+  private function isValidAmount($avtaleGiroContract, $contribution) {
+    if (isset($contribution['total_amount']) && !empty($contribution['total_amount'])) {
+      if ($contribution['total_amount'] > $avtaleGiroContract['maximum_amount']) {
+        $message = ts('Amount of contribution exceeds Avtale Giro contract maximum amount, collection cancelled');
+        $details = array(
+          'contribution id' => $contribution['id'],
+          'campaign id' => $contribution['contribution_campaign_id'],
+          'receive date' => $contribution['receive date'],
+          'amount' => $contribution['total_amount'],
+          'contact id' => $contribution['contact_id'],
+          'maximum amount contract' => $avtaleGiroContract['maximum_amount']
+        );
+        $this->createActivity('error', $message, $details);
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 }
