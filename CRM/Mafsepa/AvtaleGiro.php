@@ -209,6 +209,42 @@ class CRM_Mafsepa_AvtaleGiro {
   }
 
   /**
+   * Method to get bank account from sepa mandate
+   *
+   * @param $contribution
+   * @return array|null
+   */
+  private function getBankAccountFromMandate($contribution) {
+    $bankAccount = NULL;
+    try {
+      $bankAccount = civicrm_api3('SepaMandate', 'getvalue', array(
+        'entity_table' => 'civicrm_contribution_recur',
+        'entity_id' => $contribution['contribution_recur_id'],
+        'return' => 'iban'
+      ));
+      if (empty($bankAccount)) {
+        $message = ts('Empty bank account in recurring contribution/sepa mandate for contribution');
+        $details = array(
+          'contribution id' => $contribution['id'],
+          'receive date' => $contribution['receive date'],
+          'amount' => $contribution['total_amount'],
+          'contact id' => $contribution['contact_id'],
+        );
+        $this->createActivity('warning', $message, $details);
+      }
+    } catch (CiviCRM_API3_Exception $ex) {
+      $message = ts('No sepa mandate found for contribution');
+      $details = array(
+        'contribution id' => $contribution['id'],
+        'receive date' => $contribution['receive date'],
+        'amount' => $contribution['total_amount'],
+        'contact id' => $contribution['contact_id'],
+      );
+      $this->createActivity('error', $message, $details);
+    }
+    return $bankAccount;
+  }
+  /**
    * Method to get the AvtaleGiro contract based on bank account
    *
    * @param array $contribution
@@ -220,51 +256,27 @@ class CRM_Mafsepa_AvtaleGiro {
     if (CRM_Core_DAO::checkTableExists('civicrm_avtale_banking')) {
       // first get bank account from recurring contribution / mandate
       if (isset($contribution['contribution_recur_id']) && !empty($contribution['contribution_recur_id'])) {
-        try {
-          $bankAccount = civicrm_api3('SepaMandate', 'getvalue', array(
-            'entity_table' => 'civicrm_contribution_recur',
-            'entity_id' => $contribution['contribution_recur_id'],
-            'return' => 'iban'
-          ));
-          if (!empty($bankAccount)) {
-            $sql = "SELECT av.* FROM civicrm_bank_account_reference ref
-              LEFT JOIN civicrm_avtale_banking av ON ref.ba_id = av.ba_id WHERE reference = %1";
-            $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($bankAccount, 'String')));
-            if ($dao->fetch()) {
-              $avtaleGiro['ba_id'] = $dao->ba_id;
-              $avtaleGiro['maximum_amount'] = $dao->maximum_amount;
-              $avtaleGiro['notification_to_bank'] = $dao->notification_to_bank;
-            } else {
-              // create warning activity
-              $message = ts('No Avtale Giro contract details found for contribution');
-              $details = array(
-                'contribution id' => $contribution['id'],
-                'receive date' => $contribution['receive date'],
-                'amount' => $contribution['total_amount'],
-                'contact id' => $contribution['contact_id'],
-                'bank account' => $bankAccount
-              );
-              $this->createActivity('warning', $message, $details);
-            }
+        $bankAccount = $this->getBankAccountFromMandate($contribution);
+        if (!empty($bankAccount)) {
+          $sql = "SELECT av.* FROM civicrm_bank_account_reference ref
+            LEFT JOIN civicrm_avtale_banking av ON ref.ba_id = av.ba_id WHERE reference = %1";
+          $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($bankAccount, 'String')));
+          if ($dao->fetch()) {
+            $avtaleGiro['ba_id'] = $dao->ba_id;
+            $avtaleGiro['maximum_amount'] = $dao->maximum_amount;
+            $avtaleGiro['notification_to_bank'] = $dao->notification_to_bank;
           } else {
-            $message = ts('Empty bank account in recurring contribution/sepa mandate for contribution');
+            // create warning activity
+            $message = ts('No Avtale Giro contract details found for contribution');
             $details = array(
               'contribution id' => $contribution['id'],
               'receive date' => $contribution['receive date'],
               'amount' => $contribution['total_amount'],
               'contact id' => $contribution['contact_id'],
+              'bank account' => $bankAccount
             );
             $this->createActivity('warning', $message, $details);
           }
-        } catch (CiviCRM_API3_Exception $ex) {
-          $message = ts('No sepa mandate found for contribution');
-          $details = array(
-            'contribution id' => $contribution['id'],
-            'receive date' => $contribution['receive date'],
-            'amount' => $contribution['total_amount'],
-            'contact id' => $contribution['contact_id'],
-          );
-          $this->createActivity('error', $message, $details);
         }
       } else {
         $message = ts('No recurring contribution mandate found in contribution');
@@ -362,7 +374,7 @@ class CRM_Mafsepa_AvtaleGiro {
       $this->createActivity('warning', $message, $details);
       $abbreviatedName = '';
     }
-    $externalRef = $this->getExternalRef($contribution['financial_type_id']);
+    $externalRef = str_pad($this->getExternalRef($contribution['financial_type_id']), 25);
     $this->_countRecords++;
     $this->_fileLines[] = implode('', array(
       $this->_formatCode,
@@ -420,9 +432,18 @@ class CRM_Mafsepa_AvtaleGiro {
     $countTransactions = str_pad($this->_assignmentCount, 8, 0, STR_PAD_LEFT);
     // each contribution * 2 (2 lines each) + start and end assignment
     $countRecords = ($this->_assignmentCount * 2) + 2;
+    $countRecords = str_pad($countRecords, 8, 0, STR_PAD_LEFT);
     $assignmentTotal = $this->_assignmentTotal * 100;
     $assignmentTotal = str_pad($assignmentTotal, 17, 0, STR_PAD_LEFT);
     $this->_countRecords++;
+    $earliestDate = date('dmy', strtotime($this->_earliestDate));
+    $latestDate = date('dmy', strtotime($this->_latestDate));
+    if ($earliestDate == '010170') {
+      $earliestDate = '000000';
+    }
+    if ($latestDate == '010170') {
+      $latestDate = '000000';
+    }
     $this->_fileLines[] = implode('', array(
       $this->_formatCode,
       $this->_avtaleGiroServiceCode,
@@ -431,8 +452,8 @@ class CRM_Mafsepa_AvtaleGiro {
       $countTransactions,
       $countRecords,
       $assignmentTotal,
-      date('dmy', strtotime($this->_earliestDate)),
-      date('dmy', strtotime($this->_latestDate)),
+      $earliestDate,
+      $latestDate,
       str_pad(0, 27, 0),
     ));
   }
@@ -444,7 +465,11 @@ class CRM_Mafsepa_AvtaleGiro {
     $this->_countRecords++;
     $countRecords = str_pad($this->_countRecords, 8, 0, STR_PAD_LEFT);
     $fileTransactions = str_pad($this->_fileCount, 8, 0, STR_PAD_LEFT);
-    $fileTotalAmount = str_pad($this->_fileTotal, 17, 0, STR_PAD_LEFT);
+    $fileTotalAmount = str_pad(($this->_fileTotal * 100), 17, 0, STR_PAD_LEFT);
+    $earliestDate = date('dmy', strtotime($this->_earliestDate));
+    if ($earliestDate == '010170') {
+      $earliestDate = '000000';
+    }
     $this->_fileLines[] = implode('', array(
       $this->_formatCode,
       $this->_endServiceCode,
@@ -453,7 +478,7 @@ class CRM_Mafsepa_AvtaleGiro {
       $fileTransactions,
       $countRecords,
       $fileTotalAmount,
-      date('dmy', strtotime($this->_earliestDate)),
+      $earliestDate,
       str_pad(0, 33, 0),
     ));
   }
