@@ -31,11 +31,6 @@ class CRM_Mafsepa_APIWrapper implements API_Wrapper {
    */
   public function toApiOutput($apiRequest, $result) {
     switch ($apiRequest['entity']) {
-      case 'SepaMandate':
-        if ($apiRequest['action'] == 'createfull') {
-          $this->processBankAccount($apiRequest['params'], $result);
-        }
-        break;
       case 'SepaTransactionGroup':
         if ($apiRequest['action'] == 'create') {
           // update tx group when there is a new one (no id param)
@@ -106,25 +101,4 @@ class CRM_Mafsepa_APIWrapper implements API_Wrapper {
     } catch (CiviCRM_API3_Exception $ex) {}
   }
 
-
-  /**
-   * Method to change the iban in the sdd mandate into the bank account and update
-   * the api result with the bank account as the iban
-   *
-   * @param $params
-   * @param $result
-   */
-  private function processBankAccount($params, &$result) {
-    if (isset($params['bank_account']) && !empty($params['bank_account'])) {
-      $sql = "UPDATE civicrm_sdd_mandate SET iban = %1 WHERE id = %2";
-      $sqlParams = array(
-        1 => array($params['bank_account'], 'String'),
-        2 => array($result['id'], 'Integer')
-      );
-      CRM_Core_DAO::executeQuery($sql, $sqlParams);
-      foreach ($result['values'] as $valueId => $valueSet) {
-        $result['values'][$valueId]['iban'] = $params['bank_account'];
-      }
-    }
-  }
 }
