@@ -2,6 +2,14 @@
 
 require_once 'mafsepa.civix.php';
 
+function mafsepa_civicrm_pageRun($page) {
+  $pageName = $page->getVar('_name');
+  if ($pageName == 'CRM_Contribute_Page_Tab') {
+    // add jQuery to replace Sepa button with Avtale Giro button
+    CRM_Core_Region::instance('page-body')->add(array(
+      'template' => 'CRM/Mafsepa/Page/AvtaleGiroButton.tpl'));
+  }
+}
 /**
  * Method to check if the extension org.project60.sepa is installed
  *
@@ -18,6 +26,7 @@ function _is_sepa_installed() {
   }
   return FALSE;
 }
+
 /**
  * Implementation of civicrm_hook apiWrappers
  *

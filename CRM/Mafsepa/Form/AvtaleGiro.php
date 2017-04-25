@@ -289,5 +289,4 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     return $defaults;
   }
 
-
 }
