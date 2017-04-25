@@ -18,4 +18,10 @@
     <title>AvtaleGiro File</title>
     <access_arguments>access CiviContribute</access_arguments>
   </item>
+  <item>
+    <path>civicrm/mafsepa/form/avtalegiro</path>
+    <page_callback>CRM_Mafsepa_Form_AvtaleGiro</page_callback>
+    <title>AvtaleGiro</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

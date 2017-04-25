@@ -56,6 +56,12 @@ class CRM_Mafsepa_AvtaleGiro {
           .__METHOD__.', contact your system administrator!');
       }
     }
+  }
+
+  /**
+   * Set Class properties required for OCR Export
+   */
+  public function setOCRProperties() {
     // define OCR properties
     $this->_netsCustomerId = '00131936';
     $this->_netsId = '00008080';
@@ -86,7 +92,9 @@ class CRM_Mafsepa_AvtaleGiro {
     $this->_countRecords = 0;
     $this->_fileCount = 0;
     $this->_fileTotal = 0;
+
   }
+
 
   /**
    * Method to generate the ocr file
@@ -508,5 +516,62 @@ class CRM_Mafsepa_AvtaleGiro {
       }
     }
     return TRUE;
+  }
+
+  /**
+   * Method to fix the data after the SEPA mandate has been created with API SepaMandate createfull
+   *
+   * @param $apiResult
+   * @param $apiParams
+   * @return array
+   */
+  public function fixAfterCreatefull($apiResult, $apiParams) {
+    // check if this SEPA mandate should be fixed
+    if ($this->sepaMandateShouldBeFixed($apiResult, $apiParams)) {
+      $kid = civicrm_api3('Kid', 'generate', array(
+        'contact_id' => $apiResult['contact_id'],
+        'campaign_id' => $apiParams['campaign_id'],
+        'contribution_id' => $apiResult['entity_id'],
+      ));
+
+      $sql = 'UPDATE civicrm_sdd_mandate SET is_enabled = %1, reference = %2 WHERE id = %3';
+      $sqlParams = array(
+        1 => array(0, 'Integer'),
+        2 => array($kid['kid_number'], 'String'),
+        3 => array($apiResult['id'], 'Integer'),
+      );
+      CRM_Core_DAO::executeQuery($sql, $sqlParams);
+      $apiResult['reference'] = $kid['kid_number'];
+      $apiResult['is_enabled'] = 0;
+    }
+    return $apiResult;
+  }
+
+  /**
+   * Method to determine if SEPA Mandate is one that should be fixed for new AvtaleGiro:
+   * - status = 'FRST', type = 'RCUR' and entity_table = 'civicrm_contribution_recur'
+   * - entity_id is not empty
+   * - kid and campaign_id where in the param list of the API call
+   *
+   * @param $sepaMandate
+   * @param $apiParams
+   * @return bool
+   */
+  private function sepaMandateShouldBeFixed($sepaMandate, $apiParams) {
+    if (isset($sepaMandate['status']) && $sepaMandate['status'] == 'FRST') {
+      if (isset($sepaMandate['type']) && $sepaMandate['type'] == 'RCUR') {
+        if (isset($sepaMandate['entity_table']) && $sepaMandate['entity_table'] == 'civicrm_contribution_recur') {
+          if (isset($sepaMandate['entity_id']) && !empty($sepaMandate['entity_id'])) {
+            $requiredParams = array('kid', 'campaign_id');
+            foreach ($requiredParams as $requiredParam) {
+              if (isset($apiParams[$requiredParam]) && !empty($apiParams[$requiredParam])) {
+                return TRUE;
+              }
+            }
+          }
+        }
+      }
+    }
+    return FALSE;
   }
 }

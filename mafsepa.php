@@ -28,7 +28,7 @@ function _is_sepa_installed() {
  * @param $apiRequest
  */
 function mafsepa_civicrm_apiWrappers(&$wrappers, $apiRequest) {
-  $validEntities = array('SepaTransactionGroup');
+  $validEntities = array('SepaMandate','SepaTransactionGroup');
   if (in_array($apiRequest['entity'], $validEntities)) {
     $wrappers[] = new CRM_Mafsepa_APIWrapper();
   }

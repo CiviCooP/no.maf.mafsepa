@@ -31,6 +31,12 @@ class CRM_Mafsepa_APIWrapper implements API_Wrapper {
    */
   public function toApiOutput($apiRequest, $result) {
     switch ($apiRequest['entity']) {
+      case 'SepaMandate':
+        if ($apiRequest['action'] == 'createfull') {
+          $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+          $result['values'][$result['id']] = $avtaleGiro->fixAfterCreatefull($result['values'][$result['id']], $apiRequest['params']);
+        }
+        break;
       case 'SepaTransactionGroup':
         if ($apiRequest['action'] == 'create') {
           // update tx group when there is a new one (no id param)

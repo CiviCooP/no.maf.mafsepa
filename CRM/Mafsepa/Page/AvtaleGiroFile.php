@@ -18,6 +18,7 @@ class CRM_Mafsepa_Page_AvtaleGiroFile extends CRM_Core_Page {
     if ($sddFileId > 0) {
       //fetch the file, then the group
       $file = new CRM_Mafsepa_AvtaleGiro();
+      $file->setOCRProperties();
       $ocr = $file->generateOCR($sddFileId);
       header('Content-Type: text/plain; charset=utf-8');
       echo $ocr;
