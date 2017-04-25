@@ -9,7 +9,7 @@
     {include file="CRM/common/formButtons.tpl" location="top"}
   </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_campaign_id}</div>
+      <div class="label">{$form.avtale_giro_campaign_id.label}</div>
       <div class="content">{$form.avtale_giro_campaign_id.html}</div>
       <div class="clear"></div>
     </div>
