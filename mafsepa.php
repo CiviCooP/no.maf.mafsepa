@@ -8,23 +8,6 @@ function mafsepa_alterTemplateFile($formName, &$form, $context, &$tplName) {
 
 }
 /**
- * Implementation of civicrm_hook pageRun
- *
- * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
- * @date 25 April 2-17
- * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_pageRun
- * @param $page
- */
-function mafsepa_civicrm_pageRun($page) {
-  $pageName = $page->getVar('_name');
-
-  if ($pageName == 'CRM_Contribute_Page_Tab') {
-    // add jQuery to replace Sepa button with Avtale Giro button
-    CRM_Core_Region::instance('page-body')->add(array(
-      'template' => 'CRM/Mafsepa/AvtaleGiroActionsButtons.tpl'));
-  }
-}
-/**
  * Method to check if the extension org.project60.sepa is installed
  *
  * @return bool
