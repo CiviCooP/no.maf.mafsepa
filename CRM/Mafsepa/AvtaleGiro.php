@@ -252,6 +252,90 @@ class CRM_Mafsepa_AvtaleGiro {
     }
     return $bankAccount;
   }
+
+  /**
+   * Method to get the avtale giros for a contact
+   * (using SQL rather than API for performance)
+   *
+   * @param $contactId
+   * @return array
+   */
+  public function getAvtaleGiroForContact($contactId) {
+    $result = array();
+    if (!empty($contactId)) {
+      $result = array();
+      $sql = "SELECT a.entity_id, c.title AS campaign, r.amount, r.frequency_interval, r.frequency_unit, 
+        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank
+        FROM civicrm_contribution_recur r 
+        LEFT JOIN civicrm_sdd_mandate s ON r.id = s.entity_id AND s.entity_table = %1
+        LEFT JOIN civicrm_value_maf_avtale_giro a ON r.id = a.entity_id
+        LEFT JOIN civicrm_campaign c ON r.campaign_id = c.id
+        WHERE r.contact_id = %2";
+      $sqlParams = array(
+        1 => array('civicrm_contribution_recur', 'String',),
+        2 => array($contactId, 'Integer',),
+      );
+      $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
+      while ($dao->fetch()) {
+        $avtaleGiro = array(
+          'recur_id' => $dao->entity_id,
+          'kid' => $dao->maf_kid,
+          'campaign' => $dao->campaign,
+          'amount' => $dao->amount,
+          'max_amount' => $dao->maf_maximum_amount,
+          'notification' => $dao->maf_notification_bank,
+          'frequency' => $dao->frequency_interval.' '.$dao->frequency_month,
+          'start_date' => $dao->start_date,
+          'end_date' => $dao->end_date,
+          'status' => $dao->is_enabled
+        );
+        $result[] = $avtaleGiro;
+      }
+    }
+    return $result;
+  }
+
+  /**
+   * Method to get the avtale giro for a recurring contribution
+   * (using SQL rather than API for performance)
+   *
+   * @param $recurId
+   * @return array
+   */
+  public function getAvtaleGiroForRecur($recurId) {
+    $result = array();
+    if (!empty($recurId)) {
+      $result = array();
+      $sql = "SELECT a.entity_id, c.title AS campaign, r.amount, r.frequency_interval, r.frequency_unit, 
+        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank
+        FROM civicrm_contribution_recur r 
+        LEFT JOIN civicrm_sdd_mandate s ON r.id = s.entity_id AND s.entity_table = %1
+        LEFT JOIN civicrm_value_maf_avtale_giro a ON r.id = a.entity_id
+        LEFT JOIN civicrm_campaign c ON r.campaign_id = c.id
+        WHERE r.id = %2";
+      $sqlParams = array(
+        1 => array('civicrm_contribution_recur', 'String',),
+        2 => array($recurId, 'Integer',),
+      );
+      $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
+      if ($dao->fetch()) {
+        $result = array(
+          'recur_id' => $dao->entity_id,
+          'kid' => $dao->maf_kid,
+          'campaign' => $dao->campaign,
+          'amount' => $dao->amount,
+          'notification' => $dao->maf_notification_bank,
+          'frequency' => $dao->frequency_interval.' '.$dao->frequency_month,
+          'start_date' => $dao->start_date,
+          'end_date' => $dao->end_date,
+          'status' => $dao->is_enabled
+        );
+      }
+    }
+    return $result;
+  }
+
+
   /**
    * Method to get the AvtaleGiro contract based on bank account
    *
@@ -528,20 +612,12 @@ class CRM_Mafsepa_AvtaleGiro {
   public function fixAfterCreatefull($apiResult, $apiParams) {
     // check if this SEPA mandate should be fixed
     if ($this->sepaMandateShouldBeFixed($apiResult, $apiParams)) {
-      $kid = civicrm_api3('Kid', 'generate', array(
-        'contact_id' => $apiResult['contact_id'],
-        'campaign_id' => $apiParams['campaign_id'],
-        'contribution_id' => $apiResult['entity_id'],
-      ));
-
-      $sql = 'UPDATE civicrm_sdd_mandate SET is_enabled = %1, reference = %2 WHERE id = %3';
+      $sql = 'UPDATE civicrm_sdd_mandate SET is_enabled = %1 WHERE id = %2';
       $sqlParams = array(
         1 => array(0, 'Integer'),
-        2 => array($kid['kid_number'], 'String'),
-        3 => array($apiResult['id'], 'Integer'),
+        2 => array($apiResult['id'], 'Integer'),
       );
       CRM_Core_DAO::executeQuery($sql, $sqlParams);
-      $apiResult['reference'] = $kid['kid_number'];
       $apiResult['is_enabled'] = 0;
     }
     return $apiResult;
@@ -561,14 +637,7 @@ class CRM_Mafsepa_AvtaleGiro {
     if (isset($sepaMandate['status']) && $sepaMandate['status'] == 'FRST') {
       if (isset($sepaMandate['type']) && $sepaMandate['type'] == 'RCUR') {
         if (isset($sepaMandate['entity_table']) && $sepaMandate['entity_table'] == 'civicrm_contribution_recur') {
-          if (isset($sepaMandate['entity_id']) && !empty($sepaMandate['entity_id'])) {
-            $requiredParams = array('kid', 'campaign_id');
-            foreach ($requiredParams as $requiredParam) {
-              if (isset($apiParams[$requiredParam]) && !empty($apiParams[$requiredParam])) {
-                return TRUE;
-              }
-            }
-          }
+          return TRUE;
         }
       }
     }

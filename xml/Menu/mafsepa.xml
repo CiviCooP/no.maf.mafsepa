@@ -24,4 +24,10 @@
     <title>AvtaleGiro</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/mafsepa/page/avtalegiro</path>
+    <page_callback>CRM_Mafsepa_Page_AvtaleGiro</page_callback>
+    <title>AvtaleGiro</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

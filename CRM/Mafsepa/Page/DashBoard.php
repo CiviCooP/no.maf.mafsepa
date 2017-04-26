@@ -139,12 +139,12 @@ class CRM_Mafsepa_Page_DashBoard extends CRM_Core_Page {
         "version"           => 3,
         "type"              => 'FRST',
       );
-      $result = civicrm_api("SepaAlternativeBatching", "update", $parameters);
+      $result = civicrm_api("AvtaleGiroBatching", "update", $parameters);
       $parameters = array(
         "version"           => 3,
         "type"              => 'RCUR',
       );
-      $result = civicrm_api("SepaAlternativeBatching", "update", $parameters);
+      $result = civicrm_api("AvtaleGiroBatching", "update", $parameters);
 
     } else {
       CRM_Core_Session::setStatus(sprintf(ts("Unknown batcher mode '%s'. No batching triggered.", array('domain' => 'org.project60.sepa')), $mode), ts('Error', array('domain' => 'org.project60.sepa')), 'error');
