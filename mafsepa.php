@@ -2,11 +2,6 @@
 
 require_once 'mafsepa.civix.php';
 
-function mafsepa_alterTemplateFile($formName, &$form, $context, &$tplName) {
-  $txt = 'formName is ' . $formName;
-  CRM_Core_DAO::executeQuery('INSERT INTO ehtst (message) VALUES(%1)', array(1 => array($txt, 'String')));
-
-}
 /**
  * Method to check if the extension org.project60.sepa is installed
  *
@@ -22,6 +17,25 @@ function _is_sepa_installed() {
     return TRUE;
   }
   return FALSE;
+}
+
+/**
+ * Implementation of civicrm_hook pageRun
+ *
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 26 April 2017
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_pageRun
+ * @param $wrappers
+ * @param $apiRequest
+ */
+
+function mafsepa_civicrm_pageRun($page) {
+  $pageName = $page->getVar('_name');
+  if ($pageName == 'CRM_Contribute_Page_Tab') {
+    // add jQuery to replace Sepa button with Avtale Giro button
+    CRM_Core_Region::instance('page-body')->add(array(
+      'template' => 'CRM/Mafsepa/AvtaleGiroButton.tpl'));
+  }
 }
 
 /**
