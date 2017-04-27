@@ -12,6 +12,8 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
   private $_monthFrequencyUnitId = NULL;
   private $_campaignList = array();
   private $_defaultAmount = NULL;
+  private $_recurId = NULL;
+  private $_avtaleGiro = array();
 
   /**
    * Method to set the list of bank accounts for the contact
@@ -88,6 +90,20 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
    * @access public
    */
   function preProcess() {
+    $requestValues = CRM_Utils_Request::exportValues();
+    // if recurId is passed in request as rid, save and retrieve current avtaleGiro
+    if (isset($requestValues['rid'])) {
+      $this->_recurId = $requestValues['rid'];
+      $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+      // if action is delete, delete immediately and return to summary
+      if ($this->_action == CRM_Core_Action::DELETE) {
+        $avtaleGiro->deleteWithRecurringId($this->_recurId);
+        CRM_Core_Session::setStatus('Inactive Avtale Giro deleted from database', 'Avtale Giro deleted', 'success');
+        $session = CRM_Core_Session::singleton();
+        CRM_Utils_System::redirect($session->readUserContext());
+      }
+      $this->_avtaleGiro = $avtaleGiro->getAvtaleGiroForRecur($this->_recurId);
+    }
     $this->_monthFrequencyUnitId = 'month';
     $this->_defaultAmount = 250;
     $values = CRM_Utils_Request::exportValues();
@@ -100,12 +116,25 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       catch (CiviCRM_API3_Exception $ex) {
       }
     }
-    if ($contactName) {
-      CRM_Utils_System::setTitle(ts('Add Avtale Giro for ' . $contactName));
-    } else {
-      CRM_Utils_System::setTitle(ts('Add Avtale Giro'));
+    switch ($this->_action) {
+      case CRM_Core_Action::ADD:
+        $actionTitle = 'Add';
+        break;
+      case CRM_Core_Action::UPDATE:
+        $actionTitle = 'Edit';
+        break;
+      default:
+        $actionTitle = '';
+        break;
     }
-    $this->setBankAccountList();
+    if ($contactName) {
+      CRM_Utils_System::setTitle(ts(trim($actionTitle. ' Avtale Giro for ' . $contactName)));
+    } else {
+      CRM_Utils_System::setTitle(ts(trim($actionTitle. ' Avtale Giro')));
+    }
+    // not yet, only with issue <https://civicoop.plan.io/issues/1476>
+    //$this->setBankAccountList();
+
     $this->setFrequencyUnitList();
     $this->setCampaignList();
   }
@@ -117,16 +146,26 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     // add form elements
     $this->add('hidden', 'avtale_giro_contact_id');
     $this->add('select', 'avtale_giro_campaign_id', ts('Campaign'), $this->_campaignList, TRUE);
-    $this->addMoney('avtale_giro_max_amount', ts('Maximum Amount (NOK)'), TRUE, array(), FALSE);
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      $this->addMoney('avtale_giro_max_amount', ts('Maximum Amount (NOK)'), TRUE, array('readonly' => 'readonly'), FALSE);
+    } else {
+      $this->addMoney('avtale_giro_max_amount', ts('Maximum Amount (NOK)'), TRUE, array(), FALSE);
+    }
     $this->addMoney('avtale_giro_amount', ts('Avtale Giro Collection Amount (NOK)'), TRUE, array(), FALSE);
     $now = new DateTime();
     $minDate = new DateTime($now->format('Y').'-01-01');
     $this->add('datepicker', 'avtale_giro_start_date', ts('Start Date'), array(), TRUE,
       array('time' => FALSE, 'date' => 'dd-mm-yy', 'minDate' => $minDate->format('Y-m-d')));
+    // end date only for edit
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      $this->add('datepicker', 'avtale_giro_end_date', ts('End Date'), array(), TRUE,
+        array('time' => FALSE, 'date' => 'dd-mm-yy', 'minDate' => $minDate->format('Y-m-d')));
+    }
     $this->add('text', 'avtale_giro_frequency_interval', ts('Every'), array('maxlength' => 1), TRUE);
     $this->add('select', 'avtale_giro_frequency_unit_id', ts('Frequency'), $this->_frequencyUnitList, TRUE);
     $this->addCheckBox('avtale_giro_notification', ts('Notification to Bank'), array('' => '0'), NULL , NULL, FALSE);
-    $this->add('select', 'avtale_giro_account', ts('Bank Account'), $this->_bankAccountList, FALSE);
+    // not yet, only with issue <https://civicoop.plan.io/issues/1476>
+    //$this->add('select', 'avtale_giro_account', ts('Bank Account'), $this->_bankAccountList, FALSE);
 
     // add buttons
     $this->addButtons(array(
@@ -277,14 +316,61 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
   function setDefaultValues() {
     $defaults = array();
     $defaults['avtale_giro_contact_id'] = $this->_contactId;
+    $now = new DateTime();
+    // defaults for add
     if ($this->_action == CRM_Core_Action::ADD) {
-      $now = new DateTime();
       $defaults['avtale_giro_start_date'] = $now->format('Y-m-d');
       $defaults['avtale_giro_max_amount'] = $this->_defaultAmount;
       $defaults['avtale_giro_amount'] = $this->_defaultAmount;
       $defaults['avtale_giro_frequency_interval'] = 1;
       $defaults['avtale_giro_frequency_unit_id'] = $this->_monthFrequencyUnitId;
       $defaults['avtale_giro_notification'] = 0;
+    }
+    // defaults for edit
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      if (isset($this->_avtaleGiro['campaign_id']) && !empty($this->_avtaleGiro['campaign_id'])) {
+        $defaults['avtale_giro_campaign_id'] = $this->_avtaleGiro['campaign_id'];
+      }
+      if (isset($this->_avtaleGiro['start_date'])) {
+        $startDate = new DateTime($this->_avtaleGiro['start_date']);
+        $defaults['avtale_giro_start_date'] = $startDate->format('Y-m-d');
+      } else {
+        $defaults['avtale_giro_start_date'] = $now->format('Y-m-d');
+      }
+      if (isset($this->_avtaleGiro['end_date'])) {
+        $endDate = new DateTime($this->_avtaleGiro['end_date']);
+        $defaults['avtale_giro_end_date'] = $endDate->format('Y-m-d');
+      }
+      if (isset($this->_avtaleGiro['max_amount'])) {
+        $defaults['avtale_giro_max_amount'] = $this->_avtaleGiro['max_amount'];
+      } else {
+        $defaults['avtale_giro_max_amount'] = $this->_defaultAmount;
+      }
+      if (isset($this->_avtaleGiro['amount'])) {
+        $defaults['avtale_giro_amount'] = $this->_avtaleGiro['amount'];
+      } else {
+        $defaults['avtale_giro_amount'] = $this->_defaultAmount;
+      }
+      if (isset($this->_avtaleGiro['frequency_interval'])) {
+        $defaults['avtale_giro_frequency_interval'] = $this->_avtaleGiro['frequency_interval'];
+      } else {
+        $defaults['avtale_giro_frequency_interval'] = 1;
+      }
+      if (isset($this->_avtaleGiro['frequency_unit'])) {
+        $defaults['avtale_giro_frequency_unit_id'] = $this->_avtaleGiro['frequency_unit'];
+      } else {
+        $defaults['avtale_giro_frequency_unit_id'] = $this->_monthFrequencyUnitId;
+      }
+      if (isset($this->_avtaleGiro['notification'])) {
+        $defaults['avtale_giro_notification'] = $this->_avtaleGiro['notification'];
+      } else {
+        $defaults['avtale_giro_notification'] = 0;
+      }
+      if (isset($this->_avtaleGiro['notification'])) {
+        $defaults['avtale_giro_notification'] = $this->_avtaleGiro['notification'];
+      } else {
+        $defaults['avtale_giro_notification'] = 0;
+      }
     }
     return $defaults;
   }

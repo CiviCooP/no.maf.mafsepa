@@ -143,7 +143,7 @@ class CRM_Mafsepa_AvtaleGiro {
       $contribution = civicrm_api3('Contribution', 'getsingle', array(
         'id' => $txContribution['contribution_id']));
       // retrieve the avtale giro agreement for this contribution
-      $avtaleGiroContract = $this->getAvtaleGiroContract($contribution);
+      $avtaleGiroContract = $this->getAvtaleGiroForRecur($contribution['contribution_recur_id']);
       // validate if the amount is not bigger than the max amount of the avtale giro, and only process if
       // it is not!
       if ($this->isValidAmount($avtaleGiroContract, $contribution) == TRUE) {
@@ -264,8 +264,8 @@ class CRM_Mafsepa_AvtaleGiro {
     $result = array();
     if (!empty($contactId)) {
       $result = array();
-      $sql = "SELECT a.entity_id, c.title AS campaign, r.amount, r.frequency_interval, r.frequency_unit, 
-        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank
+      $sql = "SELECT a.entity_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
+        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank, s.id AS mandate_id
         FROM civicrm_contribution_recur r 
         LEFT JOIN civicrm_sdd_mandate s ON r.id = s.entity_id AND s.entity_table = %1
         LEFT JOIN civicrm_value_maf_avtale_giro a ON r.id = a.entity_id
@@ -281,13 +281,16 @@ class CRM_Mafsepa_AvtaleGiro {
           'recur_id' => $dao->entity_id,
           'kid' => $dao->maf_kid,
           'campaign' => $dao->campaign,
+          'campaign_id' => $dao->campaign_id,
           'amount' => $dao->amount,
           'max_amount' => $dao->maf_maximum_amount,
           'notification' => $dao->maf_notification_bank,
-          'frequency' => $dao->frequency_interval.' '.$dao->frequency_month,
+          'frequency' => $dao->frequency_interval.' '.$dao->frequency_unit,
+          'frequency_interval' => $dao->frequency_interval,
+          'frequency_unit' => $dao->frequency_unit,
           'start_date' => $dao->start_date,
-          'end_date' => $dao->end_date,
-          'status' => $dao->is_enabled
+          'status' => $dao->is_enabled,
+          'mandate_id' => $dao->mandate_id,
         );
         $result[] = $avtaleGiro;
       }
@@ -306,8 +309,8 @@ class CRM_Mafsepa_AvtaleGiro {
     $result = array();
     if (!empty($recurId)) {
       $result = array();
-      $sql = "SELECT a.entity_id, c.title AS campaign, r.amount, r.frequency_interval, r.frequency_unit, 
-        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank
+      $sql = "SELECT a.entity_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
+        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank, s.id AS mandate_id
         FROM civicrm_contribution_recur r 
         LEFT JOIN civicrm_sdd_mandate s ON r.id = s.entity_id AND s.entity_table = %1
         LEFT JOIN civicrm_value_maf_avtale_giro a ON r.id = a.entity_id
@@ -323,65 +326,21 @@ class CRM_Mafsepa_AvtaleGiro {
           'recur_id' => $dao->entity_id,
           'kid' => $dao->maf_kid,
           'campaign' => $dao->campaign,
+          'campaign_id' => $dao->campaign_id,
           'amount' => $dao->amount,
+          'max_amount' => $dao->maf_maximum_amount,
           'notification' => $dao->maf_notification_bank,
-          'frequency' => $dao->frequency_interval.' '.$dao->frequency_month,
+          'frequency' => $dao->frequency_interval.' '.$dao->frequency_unit,
+          'frequency_interval' => $dao->frequency_interval,
+          'frequency_unit' => $dao->frequency_unit,
           'start_date' => $dao->start_date,
           'end_date' => $dao->end_date,
-          'status' => $dao->is_enabled
+          'status' => $dao->is_enabled,
+          'mandate_id' => $dao->mandate_id,
         );
       }
     }
     return $result;
-  }
-
-
-  /**
-   * Method to get the AvtaleGiro contract based on bank account
-   *
-   * @param array $contribution
-   * @return array $avtaleGiro
-   *
-   */
-  private function getAvtaleGiroContract($contribution) {
-    $avtaleGiro = array();
-    if (CRM_Core_DAO::checkTableExists('civicrm_avtale_banking')) {
-      // first get bank account from recurring contribution / mandate
-      if (isset($contribution['contribution_recur_id']) && !empty($contribution['contribution_recur_id'])) {
-        $bankAccount = $this->getBankAccountFromMandate($contribution);
-        if (!empty($bankAccount)) {
-          $sql = "SELECT av.* FROM civicrm_bank_account_reference ref
-            LEFT JOIN civicrm_avtale_banking av ON ref.ba_id = av.ba_id WHERE reference = %1";
-          $dao = CRM_Core_DAO::executeQuery($sql, array(1 => array($bankAccount, 'String')));
-          if ($dao->fetch()) {
-            $avtaleGiro['ba_id'] = $dao->ba_id;
-            $avtaleGiro['maximum_amount'] = $dao->maximum_amount;
-            $avtaleGiro['notification_to_bank'] = $dao->notification_to_bank;
-          } else {
-            // create warning activity
-            $message = ts('No Avtale Giro contract details found for contribution');
-            $details = array(
-              'contribution id' => $contribution['id'],
-              'receive date' => $contribution['receive date'],
-              'amount' => $contribution['total_amount'],
-              'contact id' => $contribution['contact_id'],
-              'bank account' => $bankAccount
-            );
-            $this->createActivity('warning', $message, $details);
-          }
-        }
-      } else {
-        $message = ts('No recurring contribution mandate found in contribution');
-        $details = array(
-          'contribution id' => $contribution['id'],
-          'receive date' => $contribution['receive date'],
-          'amount' => $contribution['total_amount'],
-          'contact id' => $contribution['contact_id'],
-        );
-        $this->createActivity('error', $message, $details);
-      }
-    }
-    return $avtaleGiro;
   }
 
   /**
@@ -392,7 +351,7 @@ class CRM_Mafsepa_AvtaleGiro {
    */
   private function getTransactionType($avtaleGiroContract) {
     $transactionType = $this->_withoutNotificationTransactionType;
-    if (isset($avtaleGiroContract['notification_to_bank']) && $avtaleGiroContract['notification_to_bank'] == 1) {
+    if (isset($avtaleGiroContract['notification']) && $avtaleGiroContract['notification'] == 1) {
       $transactionType = $this->_withNotificationTransactionType;
     }
     return (string) $transactionType;
@@ -585,7 +544,7 @@ class CRM_Mafsepa_AvtaleGiro {
    */
   private function isValidAmount($avtaleGiroContract, $contribution) {
     if (isset($contribution['total_amount']) && !empty($contribution['total_amount'])) {
-      if ($contribution['total_amount'] > $avtaleGiroContract['maximum_amount']) {
+      if ($contribution['total_amount'] > $avtaleGiroContract['max_amount']) {
         $message = ts('Amount of contribution exceeds Avtale Giro contract maximum amount, collection cancelled');
         $details = array(
           'contribution id' => $contribution['id'],
@@ -593,7 +552,7 @@ class CRM_Mafsepa_AvtaleGiro {
           'receive date' => $contribution['receive date'],
           'amount' => $contribution['total_amount'],
           'contact id' => $contribution['contact_id'],
-          'maximum amount contract' => $avtaleGiroContract['maximum_amount']
+          'maximum amount contract' => $avtaleGiroContract['max_amount']
         );
         $this->createActivity('error', $message, $details);
         return FALSE;
@@ -642,5 +601,29 @@ class CRM_Mafsepa_AvtaleGiro {
       }
     }
     return FALSE;
+  }
+
+  /**
+   * Method to delete Avtale Giro
+   *
+   * @param $recurId
+   * @throws Exception when error from Sepa Mandate delete API
+   */
+  public function deleteWithRecurringId($recurId) {
+    // retrieve avtale giro data with recurring id
+    $avtaleGiro = $this->getAvtaleGiroForRecur($recurId);
+    // delete is only allowed if is_enabled = 0
+    if ($avtaleGiro['status'] == 0) {
+      try {
+        // first delete sepa mandate
+        civicrm_api3('SepaMandate', 'delete', array('id' => $avtaleGiro['mandate_id'],));
+        // next remove related recurring contribution
+        civicrm_api3('ContributionRecur', 'delete', array('id' => $recurId));
+      }
+      catch (CiviCRM_API3_Exception $ex) {
+        throw new Exception('Could not delete AvtaleGiro with KID '.$avtaleGiro['kid'].' in '.__METHOD__
+          .', error from API SepaMandate delete: '.$ex->getMessage());
+      }
+    }
   }
 }

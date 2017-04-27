@@ -1,9 +1,9 @@
 <div class="crm-block crm-form-block">
   <div class="help-block" id="help">
-    {ts}You can add an AvtaleGiro for a contact here. Enter all the details you know, the Avtale Giro will be created as
+    {ts}You can add or edit an AvtaleGiro for a contact here.
+      When adding a new one, enter all the details you know, the Avtale Giro will be created as
     NOT active. It will be activated by the start transaction from the bank.{/ts}
   </div>
-
   {* HEADER *}
   <div class="crm-submit-buttons">
     {include file="CRM/common/formButtons.tpl" location="top"}
@@ -28,6 +28,14 @@
       <div class="content">{$form.avtale_giro_start_date.html}</div>
       <div class="clear"></div>
     </div>
+    {* end date only if update *}
+    {if $action == 2}
+      <div class="crm-section">
+        <div class="label">{$form.avtale_giro_end_date.label}</div>
+        <div class="content">{$form.avtale_giro_end_date.html}</div>
+        <div class="clear"></div>
+      </div>
+  {/if}
     <div class="crm-section">
       <div class="label">{$form.avtale_giro_frequency_interval.label}</div>
       <div class="content">{$form.avtale_giro_frequency_interval.html}&nbsp;{$form.avtale_giro_frequency_unit_id.html}</div>
