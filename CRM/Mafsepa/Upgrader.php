@@ -5,7 +5,7 @@
  */
 class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
 
-  protected $wordReplacements = array(
+  protected $_wordReplacements = array(
     array(
       'original' => 'SEPA',
       'replacement' => 'Avtale Giro',
@@ -16,10 +16,21 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
       'replacement' => 'Avtale Giro Dashboard',
       'exactMatch' => true,
     ),
+    array(
+      'original' => 'Recurring Contributions',
+      'replacement' => 'Avtale Giros',
+      'exactMatch' => true,
+    ),
+    array(
+      'original' => 'Recurring Contribution',
+      'replacement' => 'Avtale Giro',
+      'exactMatch' => true,
+    ),
   );
 
   public function postInstall() {
-    foreach($this->wordReplacements as $replacement) {
+    // set word replacements
+    foreach($this->_wordReplacements as $replacement) {
       $params = array();
       $params['find_word'] = $replacement['original'];
       $params['replace_word'] = $replacement['replacement'];
@@ -28,12 +39,13 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
       }
       civicrm_api3('WordReplacement', 'create', $params);
     }
-    // replace url for menu option SEPA dashboard to MAF AvtaleGiro dashboard
-    new CRM_Mafsepa_AvtaleGiro();
+    // set payment instrument labels
+    $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+    $avtaleGiro->initializePaymentLabels();
   }
 
   public function uninstall() {
-    foreach($this->wordReplacements as $replacement) {
+    foreach($this->_wordReplacements as $replacement) {
       try {
         $params = array();
         $params['find_word'] = $replacement['original'];
@@ -44,10 +56,13 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
         // Do nothing;
       }
     }
+    // set payment instrument labels
+    $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+    $avtaleGiro->resetPaymentLabels();
   }
 
   public function enable() {
-    foreach($this->wordReplacements as $replacement) {
+    foreach($this->_wordReplacements as $replacement) {
       try {
         $params = array();
         $params['find_word'] = $replacement['original'];
@@ -58,11 +73,14 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
       } catch (Exception $e) {
         // Do nothing;
       }
+      // set payment instrument labels
+      $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+      $avtaleGiro->initializePaymentLabels();
     }
   }
 
   public function disable() {
-    foreach($this->wordReplacements as $replacement) {
+    foreach($this->_wordReplacements as $replacement) {
       try {
         $params = array();
         $params['find_word'] = $replacement['original'];
@@ -74,7 +92,9 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
         // Do nothing;
       }
     }
+    // set payment instrument labels
+    $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+    $avtaleGiro->resetPaymentLabels();
   }
-
 
 }

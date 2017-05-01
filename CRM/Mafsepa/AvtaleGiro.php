@@ -59,6 +59,51 @@ class CRM_Mafsepa_AvtaleGiro {
   }
 
   /**
+   * Method to set the payment instrument labels from the SEPA labels to Avtale labels
+   */
+  public function initializePaymentLabels() {
+    try {
+      $value = civicrm_api3('OptionValue', 'getsingle', array(
+        'option_group_id' => 'payment_instrument',
+        'name' => 'FRST',
+      ));
+      $value['label'] = 'Avtale Giro';
+      civicrm_api3('OptionValue', 'create', $value);
+      $value = civicrm_api3('OptionValue', 'getsingle', array(
+        'option_group_id' => 'payment_instrument',
+        'name' => 'RCUR',
+      ));
+      $value['label'] = 'Avtale Giro';
+      civicrm_api3('OptionValue', 'create', $value);
+    } catch (CiviCRM_API3_Exception $ex) {
+      // Do nothing.
+    }
+  }
+
+  /**
+   * Method to reset SEPA payment instruments
+   */
+  public function resetPaymentLabels() {
+    try {
+      $value = civicrm_api3('OptionValue', 'getsingle', array(
+        'option_group_id' => 'payment_instrument',
+        'name' => 'FRST',
+      ));
+      $value['label'] = 'SEPA DD First Transaction';
+      civicrm_api3('OptionValue', 'create', $value);
+      $value = civicrm_api3('OptionValue', 'getsingle', array(
+        'option_group_id' => 'payment_instrument',
+        'name' => 'RCUR',
+      ));
+      $value['label'] = 'SEPA DD Recurring Transaction';
+      civicrm_api3('OptionValue', 'create', $value);
+    }
+    catch (CiviCRM_API3_Exception $ex) {
+      // Do nothing
+    }
+  }
+
+  /**
    * Set Class properties required for OCR Export
    */
   public function setOCRProperties() {
