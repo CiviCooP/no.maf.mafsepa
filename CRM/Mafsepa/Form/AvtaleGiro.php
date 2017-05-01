@@ -11,6 +11,7 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
   private $_frequencyUnitList = array();
   private $_monthFrequencyUnitId = NULL;
   private $_campaignList = array();
+  private $_collectionDaysList = array();
   private $_defaultAmount = NULL;
   private $_recurId = NULL;
   private $_avtaleGiro = array();
@@ -42,6 +43,24 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       }
     }
     catch (CiviCRM_API3_Exception $ex) {
+    }
+  }
+
+  /**
+   * Method to set the list of collection days (based on SEPA setting)
+   */
+  private function setCollectionDaysList() {
+    try {
+      $cycleDays = civicrm_api3('Setting', 'getvalue', array('name' => 'cycledays',));
+      if (!empty($cycleDays)) {
+        $values = explode(',', $cycleDays);
+        foreach ($values as $value) {
+          $this->_collectionDaysList[$value] = $value;
+        }
+      }
+    }
+    catch (CiviCRM_API3_Exception $ex) {
+
     }
   }
   /**
@@ -103,19 +122,17 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
         CRM_Utils_System::redirect($session->readUserContext());
       }
       $this->_avtaleGiro = $avtaleGiro->getAvtaleGiroForRecur($this->_recurId);
+      if (isset($this->_avtaleGiro['contact_id'])) {
+        $this->_contactId = $this->_avtaleGiro['contact_id'];
+      }
+    } else {
+      if (isset($requestValues['cid'])) {
+        $this->_contactId = $requestValues['cid'];
+      }
     }
     $this->_monthFrequencyUnitId = 'month';
     $this->_defaultAmount = 250;
-    $values = CRM_Utils_Request::exportValues();
     $contactName = NULL;
-    if (isset($values['cid'])) {
-      $this->_contactId = $values['cid'];
-      try {
-        $contactName = civicrm_api3('Contact', 'getvalue', array('id' => $this->_contactId, 'return' => 'display_name',));
-      }
-      catch (CiviCRM_API3_Exception $ex) {
-      }
-    }
     switch ($this->_action) {
       case CRM_Core_Action::ADD:
         $actionTitle = 'Add';
@@ -127,6 +144,11 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
         $actionTitle = '';
         break;
     }
+    try {
+      $contactName = civicrm_api3('Contact', 'getvalue', array('id' => $this->_contactId, 'return' => 'display_name',));
+    }
+    catch (CiviCRM_API3_Exception $ex) {
+    }
     if ($contactName) {
       CRM_Utils_System::setTitle(ts(trim($actionTitle. ' Avtale Giro for ' . $contactName)));
     } else {
@@ -137,6 +159,7 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
 
     $this->setFrequencyUnitList();
     $this->setCampaignList();
+    $this->setCollectionDaysList();
   }
 
   /**
@@ -144,26 +167,27 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
    */
   public function buildQuickForm() {
     // add form elements
-    $this->add('hidden', 'avtale_giro_contact_id');
-    $this->add('select', 'avtale_giro_campaign_id', ts('Campaign'), $this->_campaignList, TRUE);
-    if ($this->_action == CRM_Core_Action::UPDATE) {
-      $this->addMoney('avtale_giro_max_amount', ts('Maximum Amount (NOK)'), TRUE, array('readonly' => 'readonly'), FALSE);
-    } else {
-      $this->addMoney('avtale_giro_max_amount', ts('Maximum Amount (NOK)'), TRUE, array(), FALSE);
-    }
-    $this->addMoney('avtale_giro_amount', ts('Avtale Giro Collection Amount (NOK)'), TRUE, array(), FALSE);
+    $this->add('hidden', 'contact_id');
+    $this->add('hidden', 'recur_id');
+    $this->add('select', 'campaign_id', ts('Campaign'), $this->_campaignList, TRUE);
+    $this->addMoney('max_amount', ts('Maximum Amount (NOK)'), TRUE, array(), FALSE);
+    $this->addMoney('amount', ts('Avtale Giro Collection Amount (NOK)'), TRUE, array(), FALSE);
+    $this->add('select', 'cycle_day', ts('Collection Day'), $this->_collectionDaysList, TRUE);
     $now = new DateTime();
     $minDate = new DateTime($now->format('Y').'-01-01');
-    $this->add('datepicker', 'avtale_giro_start_date', ts('Start Date'), array(), TRUE,
-      array('time' => FALSE, 'date' => 'dd-mm-yy', 'minDate' => $minDate->format('Y-m-d')));
-    // end date only for edit
-    if ($this->_action == CRM_Core_Action::UPDATE) {
-      $this->add('datepicker', 'avtale_giro_end_date', ts('End Date'), array(), TRUE,
+    // start date only if add
+    if ($this->_action == CRM_Core_Action::ADD) {
+      $this->add('datepicker', 'start_date', ts('Start Date'), array(), TRUE,
         array('time' => FALSE, 'date' => 'dd-mm-yy', 'minDate' => $minDate->format('Y-m-d')));
     }
-    $this->add('text', 'avtale_giro_frequency_interval', ts('Every'), array('maxlength' => 1), TRUE);
-    $this->add('select', 'avtale_giro_frequency_unit_id', ts('Frequency'), $this->_frequencyUnitList, TRUE);
-    $this->addCheckBox('avtale_giro_notification', ts('Notification to Bank'), array('' => '0'), NULL , NULL, FALSE);
+    // end date only for edit
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      $this->add('datepicker', 'end_date', ts('End Date'), array(), FALSE,
+        array('time' => FALSE, 'date' => 'dd-mm-yy', 'minDate' => $minDate->format('Y-m-d')));
+    }
+    $this->add('text', 'frequency_interval', ts('Every'), array('maxlength' => 1), TRUE);
+    $this->add('select', 'frequency_unit_id', ts('Frequency'), $this->_frequencyUnitList, TRUE);
+    $this->addCheckBox('notification', ts('Notification to Bank'), array('' => '0'), NULL , NULL, FALSE);
     // not yet, only with issue <https://civicoop.plan.io/issues/1476>
     //$this->add('select', 'avtale_giro_account', ts('Bank Account'), $this->_bankAccountList, FALSE);
 
@@ -190,9 +214,9 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
    */
   public static function validateAmount($fields) {
     $errors = array();
-    if (isset($fields['avtale_giro_amount']) && !empty($fields['avtale_giro_amount'])) {
-      if ($fields['avtale_giro_amount'] > $fields['avtale_giro_max_amount']) {
-        $errors['avtale_giro_amount'] = ts('Amount can not be greater than maximum amount');
+    if (isset($fields['amount']) && !empty($fields['amount'])) {
+      if ($fields['amount'] > $fields['max_amount']) {
+        $errors['amount'] = ts('Amount can not be greater than maximum amount');
         return $errors;
       }
     }
@@ -203,34 +227,137 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
    * Overridden parent method to process submitted form
    */
   public function postProcess() {
-    if (isset($this->_submitValues['avtale_giro_contact_id'])) {
-      $this->_contactId = $this->_submitValues['avtale_giro_contact_id'];
+    if (isset($this->_submitValues['contact_id'])) {
+      $this->_contactId = $this->_submitValues['contact_id'];
     }
-    // create sepa mandate
-    $mandate = $this->createSepaMandate($this->_submitValues);
-    if ($mandate) {
-      // save AvtaleGiro
-      $this->saveAvtaleGiro($this->_submitValues, $mandate);
-      try {
-        $contactName = civicrm_api3('Contact', 'getvalue', array(
-          'id' => $this->_contactId,
-          'return' => 'display_name',));
-        CRM_Core_Session::setStatus('Created Avtale Giro for ' . $contactName, 'Avtale Giro saved', 'success');
-      } catch (CiviCRM_API3_Exception $ex) {
-        CRM_Core_Session::setStatus('Created Avtale Giro', 'Avtale Giro saved', 'success');
+    if (isset($this->_submitValues['recur_id'])) {
+      $this->_recurId = $this->_submitValues['recur_id'];
+    }
+    try {
+      $contactName = civicrm_api3('Contact', 'getvalue', array(
+        'id' => $this->_contactId,
+        'return' => 'display_name',));
+    }
+    catch (CiviCRM_API3_Exception $ex) {
+      $contactName = NULL;
+    }
+    // if end date set, terminate mandate
+    if (isset($this->_submitValues['end_date']) && !empty($this->_submitValues['end_date'])) {
+      $this->terminateMandate();
+      $endDate = new DateTime($this->_submitValues['end_date']);
+      CRM_Core_Session::setStatus('Ended Avtale Giro for ' . $contactName.' on '.$endDate->format('d-m-Y'), 'Avtale Giro ended', 'success');
+    } else {
+      if (empty($this->_avtaleGiro)) {
+        $currentAvtaleGiro = new CRM_Mafsepa_AvtaleGiro();
+        $this->_avtaleGiro = $currentAvtaleGiro->getAvtaleGiroForRecur($this->_recurId);
       }
+      // check if mandate and/or avtale giro need to be created / updated
+      $mandateRequired = $this->checkMandateRequired();
+      $avtaleGiroRequired = $this->checkAvtaleGiroRequired();
+      // set mandate data and create or update mandate
+      if ($mandateRequired) {
+        $mandateData = $this->setMandateData();
+        $mandate = $this->saveSepaMandate($mandateData);
+        // set kid in add mode
+        if ($this->_action == CRM_Core_Action::ADD) {
+          $this->_avtaleGiro['kid'] = $mandate['reference'];
+        }
+      }
+      // set avtale giro data and create or update avtale giro
+      if ($avtaleGiroRequired) {
+        // save AvtaleGiro
+        $avtaleGiroData = $this->setAvtaleGiroData();
+        $this->saveAvtaleGiro($avtaleGiroData);
+      }
+      CRM_Core_Session::setStatus('Saved Avtale Giro for ' . $contactName, 'Avtale Giro saved', 'success');
     }
     parent::postProcess();
+  }
+  private function terminateMandate() {
+    // get mandate id with recur id - api SepaMandate does not allow getvalue with entity_id so with SQL
+    $sql = 'SELECT id FROM civicrm_sdd_mandate WHERE entity_table = %1 AND entity_id = %2';
+    $mandateId = CRM_Core_DAO::singleValueQuery($sql, array(
+      1 => array('civicrm_contribution_recur', 'String'),
+      2 => array($this->_recurId, 'Integer'),
+    ));
+    if ($mandateId) {
+      CRM_Sepa_BAO_SEPAMandate::terminateMandate($mandateId, $this->_submitValues['end_date'], 'End Date in UI');
+    }
+  }
+
+  /**
+   * Method to determine if the mandate needs creating or updating
+   *
+   * @return bool
+   */
+  private function checkMandateRequired() {
+    // always required if add
+    if ($this->_action == CRM_Core_Action::ADD) {
+      return TRUE;
+    }
+    // if edit, check if anything changed that requires mandate update
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      $mandateChanges = array('amount', 'campaign_id', 'cycle_day', 'end_date', 'frequency_interval', 'frequency_unit',);
+      foreach ($mandateChanges as $mandateChange) {
+        if (isset($this->_submitValues[$mandateChange]) && $this->_submitValues[$mandateChange] != $this->_avtaleGiro[$mandateChange]) {
+          return TRUE;
+        }
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Method to determine if the avtale giro custom data needs creating or updating
+   *
+   * @return bool
+   */
+  private function checkAvtaleGiroRequired() {
+    // always required if add
+    if ($this->_action == CRM_Core_Action::ADD) {
+      return TRUE;
+    }
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      // max amount changed
+      if (isset($this->_submitValues['max_amount']) && $this->_submitValues['max_amount'] != $this->_avtaleGiro['max_amount']) {
+        return TRUE;
+      }
+      // notification
+      if (!isset($this->_submitValues['notification']) && $this->_avtaleGiro['notification'] != 0) {
+        return TRUE;
+      }
+      if (isset($this->_submitValues['notification']) && $this->_avtaleGiro['notification'] != $this->_submitValues['notification']) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**
    * Method to create a SEPA mandate for AvtaleGiro with API
    *
-   * @param $submitValues
+   * @param $mandateData
+   * @return array
+   * @throws Exception when error from API SepaMandate createfull
+   */
+  private function saveSepaMandate($mandateData) {
+    try {
+      $created = civicrm_api3('SepaMandate', 'createfull', $mandateData);
+      return $created['values'][$created['id']];
+    }
+    catch (CiviCRM_API3_Exception $ex) {
+      throw new Exception('Could not create Avtale Giro in '.__METHOD__
+        .', contact your system administrator. Error from API SepaMandate createfull: '.$ex->getMessage());
+    }
+  }
+
+  /**
+   * Method to set SEPA mandata data
+   *
    * @return array
    * @throws Exception when method for default creditor not found, when no creditor found or error from API
    */
-  private function createSepaMandate($submitValues) {
+  private function setMandateData() {
     if (!method_exists('CRM_Sepa_Logic_Settings', 'defaultCreditor')) {
       throw new Exception('Could not find method CRM_Sepa_Logic_Settings::defaultCreditor to find a default creditor in '
         .__METHOD__.', contact your system administrator!');
@@ -243,69 +370,89 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     try {
       $kid = civicrm_api3('Kid', 'generate', array(
         'contact_id' => $this->_contactId,
-        'campaign_id' => $submitValues['avtale_giro_campaign_id'],
+        'campaign_id' => $this->_submitValues['campaign_id'],
       ));
     }
     catch (CiviCRM_API3_Exception $ex) {
       $kid['kid_number'] = 'temp_kid';
     }
-    $session = CRM_Core_Session::singleton();
-    $startDate = new DateTime($submitValues['avtale_giro_start_date']);
-    try {
-      $contactName = civicrm_api3('Contact', 'getvalue', array(
-        'id' => $session->get('userID'),
-        'return' => 'display_name'
-      ));
-    }
-    catch (CiviCRM_API3_Exception $ex) {
-      $contactName = '';
-    }
-    $mandateParams = array(
+    $mandateData = array(
       'creditor_id' => $creditor->creditor_id,
       'contact_id' => $this->_contactId,
       'financial_type_id' => $config->getDefaultMandateFinancialTypeId(),
       'status' => $config->getDefaultMandateStatus(),
       'type' => $config->getDefaultMandateType(),
       'currency' => $config->getDefaultMandateCurrency(),
-      'source' => 'added by '.$contactName.'(contact ID '.$session->get('userID'),
+      'source' => 'Avtale Giro',
       'reference' => $kid['kid_number'],
       'kid' => $kid['kid_number'],
-      'frequency_interval' => $submitValues['avtale_giro_frequency_interval'],
-      'frequency_unit' => $submitValues['avtale_giro_frequency_unit_id'],
-      'amount' => $submitValues['avtale_giro_amount'],
-      'start_date' => $startDate->format('d-m-Y'),
-      'campaign_id' => $submitValues['avtale_giro_campaign_id'],
+      'frequency_interval' => $this->_submitValues['frequency_interval'],
+      'frequency_unit' => $this->_submitValues['frequency_unit_id'],
+      'amount' => $this->_submitValues['amount'],
+      'campaign_id' => $this->_submitValues['campaign_id'],
+      'cycle_day' => $this->_submitValues['cycle_day'],
     );
-    try {
-      $created = civicrm_api3('SepaMandate', 'createfull', $mandateParams);
-      return $created['values'][$created['id']];
+    // when edit, set mandate id
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      $mandateData['id'] = $this->_avtaleGiro['mandate_id'];
     }
-    catch (CiviCRM_API3_Exception $ex) {
-      throw new Exception('Could not create Avtale Giro in '.__METHOD__
-        .', contact your system administrator. Error from API SepaMandate createfull: '.$ex->getMessage());
+    // when add, set start date
+    if ($this->_action == CRM_Core_Action::ADD) {
+      $startDate = new DateTime($this->_submitValues['start_date']);
+      $mandateData['start_date'] = $startDate->format('d-m-Y');
     }
+    return $mandateData;
   }
-  private function saveAvtaleGiro($submitValues, $mandate) {
+
+  /**
+   * Method to set avtale giro data
+   *
+   * @return array
+   */
+  private function setAvtaleGiroData() {
+    $avtaleGiroData = array(
+      'max_amount' => $this->_submitValues['max_amount'],
+      'entity_id' => $this->_recurId,
+    );
+    if (isset($this->_submitValues['notification'])) {
+      $avtaleGiroData['notification'] = 1;
+    } else {
+      $avtaleGiroData['notification'] = 0;
+    }
+    return $avtaleGiroData;
+  }
+
+  /**
+   * Method to set avtale giro data
+   *
+   * @param $avtaleGiroData
+   */
+  private function saveAvtaleGiro($avtaleGiroData) {
     $config = CRM_Mafsepa_Config::singleton();
     $tableName = $config->getAvtaleGiroCustomGroup('table_name');
     $maxAmountCustomField = $config->getAvtaleGiroCustomField('maf_maximum_amount');
     $notificationCustomField = $config->getAvtaleGiroCustomField('maf_notification_bank');
-    $kidCustomField = $config->getAvtaleGiroCustomField('maf_kid');
-    if (isset($submitValues['avtale_giro_notification'])) {
-      $notification = 1;
-    } else {
-      $notification = 0;
+    // insert on add
+    if ($this->_action == CRM_Core_Action::ADD) {
+      $sql = 'INSERT INTO ' . $tableName . ' (entity_id, ' . $maxAmountCustomField['column_name'] . ', ' . $notificationCustomField['column_name']
+        . ') VALUES(%1, %2, %3)';
+      $sqlParams = array(
+        1 => array($avtaleGiroData['entity_id'], 'Integer',),
+        2 => array($avtaleGiroData['max_amount'], 'Money',),
+        3 => array($avtaleGiroData['notification'], 'Integer',),);
+      CRM_Core_DAO::executeQuery($sql, $sqlParams);
     }
-    $sql = 'INSERT INTO '.$tableName.' (entity_id, '.$maxAmountCustomField['column_name'].', '.$notificationCustomField['column_name'].
-      ', '.$kidCustomField['column_name'].') VALUES(%1, %2, %3, %4)';
-    $sqlParams = array(
-      1 => array($mandate['entity_id'], 'Integer',),
-      2 => array($submitValues['avtale_giro_max_amount'], 'Money',),
-      3 => array($notification, 'Integer',),
-      4 => array($mandate['reference'], 'String',),);
-    CRM_Core_DAO::executeQuery($sql, $sqlParams);
+    // update on edit
+    if ($this->_action == CRM_Core_Action::UPDATE) {
+      $sql = 'UPDATE ' . $tableName . ' SET '. $maxAmountCustomField['column_name']. ' = %1, ' . $notificationCustomField['column_name']
+        . ' = %2 WHERE entity_id = %3';
+      $sqlParams = array(
+        1 => array($avtaleGiroData['max_amount'], 'Money',),
+        2 => array($avtaleGiroData['notification'], 'Integer',),
+        3 => array($avtaleGiroData['entity_id'], 'Integer',),);
+      CRM_Core_DAO::executeQuery($sql, $sqlParams);
+    }
   }
-
 
   /**
    * Overridden parent method to set default values
@@ -315,61 +462,56 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
    */
   function setDefaultValues() {
     $defaults = array();
-    $defaults['avtale_giro_contact_id'] = $this->_contactId;
+    $defaults['contact_id'] = $this->_contactId;
+    $defaults['recur_id'] = $this->_recurId;
     $now = new DateTime();
     // defaults for add
     if ($this->_action == CRM_Core_Action::ADD) {
-      $defaults['avtale_giro_start_date'] = $now->format('Y-m-d');
-      $defaults['avtale_giro_max_amount'] = $this->_defaultAmount;
-      $defaults['avtale_giro_amount'] = $this->_defaultAmount;
-      $defaults['avtale_giro_frequency_interval'] = 1;
-      $defaults['avtale_giro_frequency_unit_id'] = $this->_monthFrequencyUnitId;
-      $defaults['avtale_giro_notification'] = 0;
+      $defaults['start_date'] = $now->format('Y-m-d');
+      $defaults['max_amount'] = $this->_defaultAmount;
+      $defaults['amount'] = $this->_defaultAmount;
+      $defaults['frequency_interval'] = 1;
+      $defaults['frequency_unit_id'] = $this->_monthFrequencyUnitId;
+      $defaults['notification'] = 0;
     }
     // defaults for edit
     if ($this->_action == CRM_Core_Action::UPDATE) {
       if (isset($this->_avtaleGiro['campaign_id']) && !empty($this->_avtaleGiro['campaign_id'])) {
-        $defaults['avtale_giro_campaign_id'] = $this->_avtaleGiro['campaign_id'];
-      }
-      if (isset($this->_avtaleGiro['start_date'])) {
-        $startDate = new DateTime($this->_avtaleGiro['start_date']);
-        $defaults['avtale_giro_start_date'] = $startDate->format('Y-m-d');
-      } else {
-        $defaults['avtale_giro_start_date'] = $now->format('Y-m-d');
+        $defaults['campaign_id'] = $this->_avtaleGiro['campaign_id'];
       }
       if (isset($this->_avtaleGiro['end_date'])) {
         $endDate = new DateTime($this->_avtaleGiro['end_date']);
-        $defaults['avtale_giro_end_date'] = $endDate->format('Y-m-d');
+        $defaults['end_date'] = $endDate->format('Y-m-d');
       }
       if (isset($this->_avtaleGiro['max_amount'])) {
-        $defaults['avtale_giro_max_amount'] = $this->_avtaleGiro['max_amount'];
+        $defaults['max_amount'] = $this->_avtaleGiro['max_amount'];
       } else {
-        $defaults['avtale_giro_max_amount'] = $this->_defaultAmount;
+        $defaults['max_amount'] = $this->_defaultAmount;
       }
       if (isset($this->_avtaleGiro['amount'])) {
-        $defaults['avtale_giro_amount'] = $this->_avtaleGiro['amount'];
+        $defaults['amount'] = $this->_avtaleGiro['amount'];
       } else {
-        $defaults['avtale_giro_amount'] = $this->_defaultAmount;
+        $defaults['amount'] = $this->_defaultAmount;
       }
       if (isset($this->_avtaleGiro['frequency_interval'])) {
-        $defaults['avtale_giro_frequency_interval'] = $this->_avtaleGiro['frequency_interval'];
+        $defaults['frequency_interval'] = $this->_avtaleGiro['frequency_interval'];
       } else {
-        $defaults['avtale_giro_frequency_interval'] = 1;
+        $defaults['frequency_interval'] = 1;
       }
       if (isset($this->_avtaleGiro['frequency_unit'])) {
-        $defaults['avtale_giro_frequency_unit_id'] = $this->_avtaleGiro['frequency_unit'];
+        $defaults['frequency_unit_id'] = $this->_avtaleGiro['frequency_unit'];
       } else {
-        $defaults['avtale_giro_frequency_unit_id'] = $this->_monthFrequencyUnitId;
+        $defaults['frequency_unit_id'] = $this->_monthFrequencyUnitId;
       }
       if (isset($this->_avtaleGiro['notification'])) {
-        $defaults['avtale_giro_notification'] = $this->_avtaleGiro['notification'];
+        $defaults['notification'] = $this->_avtaleGiro['notification'];
       } else {
-        $defaults['avtale_giro_notification'] = 0;
+        $defaults['notification'] = 0;
       }
-      if (isset($this->_avtaleGiro['notification'])) {
-        $defaults['avtale_giro_notification'] = $this->_avtaleGiro['notification'];
+      if (isset($this->_avtaleGiro['cycle_day'])) {
+        $defaults['cycle_day'] = CRM_Utils_Array::key($this->_avtaleGiro['cycle_day'], $this->_collectionDaysList);
       } else {
-        $defaults['avtale_giro_notification'] = 0;
+        $defaults['cycle_day'] = array_shift($this->_collectionDaysList);
       }
     }
     return $defaults;

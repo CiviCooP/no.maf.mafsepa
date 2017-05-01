@@ -310,7 +310,8 @@ class CRM_Mafsepa_AvtaleGiro {
     if (!empty($contactId)) {
       $result = array();
       $sql = "SELECT a.entity_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
-        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank, s.id AS mandate_id
+        r.start_date, r.end_date, s.is_enabled, s.reference AS kid, a.maf_maximum_amount, a.maf_notification_bank, r.cycle_day, 
+        s.id AS mandate_id, r.contact_id
         FROM civicrm_contribution_recur r 
         LEFT JOIN civicrm_sdd_mandate s ON r.id = s.entity_id AND s.entity_table = %1
         LEFT JOIN civicrm_value_maf_avtale_giro a ON r.id = a.entity_id
@@ -324,7 +325,8 @@ class CRM_Mafsepa_AvtaleGiro {
       while ($dao->fetch()) {
         $avtaleGiro = array(
           'recur_id' => $dao->entity_id,
-          'kid' => $dao->maf_kid,
+          'contact_id' => $dao->contact_id,
+          'kid' => $dao->kid,
           'campaign' => $dao->campaign,
           'campaign_id' => $dao->campaign_id,
           'amount' => $dao->amount,
@@ -334,7 +336,9 @@ class CRM_Mafsepa_AvtaleGiro {
           'frequency_interval' => $dao->frequency_interval,
           'frequency_unit' => $dao->frequency_unit,
           'start_date' => $dao->start_date,
+          'end_date' => $dao->end_date,
           'status' => $dao->is_enabled,
+          'cycle_day' => $dao->cycle_day,
           'mandate_id' => $dao->mandate_id,
         );
         $result[] = $avtaleGiro;
@@ -355,7 +359,8 @@ class CRM_Mafsepa_AvtaleGiro {
     if (!empty($recurId)) {
       $result = array();
       $sql = "SELECT a.entity_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
-        r.start_date, r.end_date, s.is_enabled, a.maf_kid, a.maf_maximum_amount, a.maf_notification_bank, s.id AS mandate_id
+        r.start_date, r.end_date, s.is_enabled, s.reference AS kid, a.maf_maximum_amount, a.maf_notification_bank, r.cycle_day, 
+        s.id AS mandate_id, r.contact_id
         FROM civicrm_contribution_recur r 
         LEFT JOIN civicrm_sdd_mandate s ON r.id = s.entity_id AND s.entity_table = %1
         LEFT JOIN civicrm_value_maf_avtale_giro a ON r.id = a.entity_id
@@ -369,7 +374,8 @@ class CRM_Mafsepa_AvtaleGiro {
       if ($dao->fetch()) {
         $result = array(
           'recur_id' => $dao->entity_id,
-          'kid' => $dao->maf_kid,
+          'contact_id' => $dao->contact_id,
+          'kid' => $dao->kid,
           'campaign' => $dao->campaign,
           'campaign_id' => $dao->campaign_id,
           'amount' => $dao->amount,
@@ -380,6 +386,7 @@ class CRM_Mafsepa_AvtaleGiro {
           'frequency_unit' => $dao->frequency_unit,
           'start_date' => $dao->start_date,
           'end_date' => $dao->end_date,
+          'cycle_day' => $dao->cycle_day,
           'status' => $dao->is_enabled,
           'mandate_id' => $dao->mandate_id,
         );
@@ -640,10 +647,13 @@ class CRM_Mafsepa_AvtaleGiro {
    * @return bool
    */
   private function sepaMandateShouldBeFixed($sepaMandate, $apiParams) {
-    if (isset($sepaMandate['status']) && $sepaMandate['status'] == 'FRST') {
-      if (isset($sepaMandate['type']) && $sepaMandate['type'] == 'RCUR') {
-        if (isset($sepaMandate['entity_table']) && $sepaMandate['entity_table'] == 'civicrm_contribution_recur') {
-          return TRUE;
+    // not if apiParams['id'] was set (update!)
+    if (!isset($apiParams['id'])) {
+      if (isset($sepaMandate['status']) && $sepaMandate['status'] == 'FRST') {
+        if (isset($sepaMandate['type']) && $sepaMandate['type'] == 'RCUR') {
+          if (isset($sepaMandate['entity_table']) && $sepaMandate['entity_table'] == 'civicrm_contribution_recur') {
+            return TRUE;
+          }
         }
       }
     }

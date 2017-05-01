@@ -9,46 +9,51 @@
     {include file="CRM/common/formButtons.tpl" location="top"}
   </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_campaign_id.label}</div>
-      <div class="content">{$form.avtale_giro_campaign_id.html}</div>
+      <div class="label">{$form.campaign_id.label}</div>
+      <div class="content">{$form.campaign_id.html}</div>
       <div class="clear"></div>
     </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_max_amount.label}</div>
-      <div class="content">{$form.avtale_giro_max_amount.html}</div>
+      <div class="label">{$form.max_amount.label}</div>
+      <div class="content">{$form.max_amount.html}</div>
       <div class="clear"></div>
     </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_amount.label}</div>
-      <div class="content">{$form.avtale_giro_amount.html}</div>
+      <div class="label">{$form.amount.label}</div>
+      <div class="content">{$form.amount.html}</div>
       <div class="clear"></div>
     </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_start_date.label}</div>
-      <div class="content">{$form.avtale_giro_start_date.html}</div>
+      <div class="label">{$form.cycle_day.label}</div>
+      <div class="content">{$form.cycle_day.html}</div>
+      <div class="clear"></div>
+    </div>
+    <div class="crm-section">
+      <div class="label">{$form.start_date.label}</div>
+      <div class="content">{$form.start_date.html}</div>
       <div class="clear"></div>
     </div>
     {* end date only if update *}
     {if $action == 2}
       <div class="crm-section">
-        <div class="label">{$form.avtale_giro_end_date.label}</div>
-        <div class="content">{$form.avtale_giro_end_date.html}</div>
+        <div class="label">{$form.end_date.label}</div>
+        <div class="content">{$form.end_date.html}</div>
         <div class="clear"></div>
       </div>
   {/if}
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_frequency_interval.label}</div>
-      <div class="content">{$form.avtale_giro_frequency_interval.html}&nbsp;{$form.avtale_giro_frequency_unit_id.html}</div>
+      <div class="label">{$form.frequency_interval.label}</div>
+      <div class="content">{$form.frequency_interval.html}&nbsp;{$form.frequency_unit_id.html}</div>
       <div class="clear"></div>
     </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_notification.label}</div>
-      <div class="content">{$form.avtale_giro_notification.html}</div>
+      <div class="label">{$form.notification.label}</div>
+      <div class="content">{$form.notification.html}</div>
       <div class="clear"></div>
     </div>
     <div class="crm-section">
-      <div class="label">{$form.avtale_giro_account.label}</div>
-      <div class="content">{$form.avtale_giro_account.html}</div>
+      <div class="label">{$form.account.label}</div>
+      <div class="content">{$form.account.html}</div>
       <div class="clear"></div>
     </div>
 

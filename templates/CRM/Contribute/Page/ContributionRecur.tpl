@@ -37,6 +37,7 @@
         <th scope="col">{ts}Max Amount{/ts}</th>
         <th scope="col">{ts}Notification?{/ts}</th>
         <th scope="col">{ts}Frequency{/ts}</th>
+        <th scope="col">{ts}Cycle Day{/ts}</th>
         <th scope="col">{ts}Start Date{/ts}</th>
         <th scope="col">{ts}End Date{/ts}</th>
         <th scope="col">{ts}Active?{/ts}</th>
@@ -50,6 +51,7 @@
           <td>{$avtalegiro.max_amount|crmMoney:"NOK"}</td>
           <td>{if $avtalegiro.notification == 1}{ts}Yes{/ts}{else}{ts}No{/ts}{/if}</td>
           <td>{$avtalegiro.frequency}</td>
+          <td>{$avtalegiro.cycle_day}</td>
           <td>{$avtalegiro.start_date|crmDate}</td>
           <td>{$avtalegiro.end_date|crmDate}</td>
           <td>{if $avtalegiro.status == 1}{ts}Yes{/ts}{else}{ts}No{/ts}{/if}</td>

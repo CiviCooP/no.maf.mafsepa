@@ -26,6 +26,11 @@ class CRM_Mafsepa_Upgrader extends CRM_Mafsepa_Upgrader_Base {
       'replacement' => 'Avtale Giro',
       'exactMatch' => true,
     ),
+    array(
+      'original' => 'Sepa Direct Debit',
+      'replacement' => 'Avtale Giro',
+      'exactMatch' => true,
+    ),
   );
 
   public function postInstall() {
