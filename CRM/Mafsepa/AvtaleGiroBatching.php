@@ -242,11 +242,12 @@ class CRM_Mafsepa_AvtaleGiroBatching {
         // this group does not yet exist -> create
 
         // find unused reference
-        $reference = "TXG-${creditor_id}-${mode}-${collection_date}";
+        $config = CRM_Mafsepa_Config::singleton();
+        $reference = "{$config->getMafTxGroupReference()}-${creditor_id}-${mode}-${collection_date}";
         $counter = 0;
         while (self::referenceExists($reference)) {
           $counter += 1;
-          $reference = "TXG-${creditor_id}-${mode}-${collection_date}--".$counter;
+          $reference = "{$config->getMafTxGroupReference()}-${creditor_id}-${mode}-${collection_date}--".$counter;
         }
 
         $group = civicrm_api('SepaTransactionGroup', 'create', array(

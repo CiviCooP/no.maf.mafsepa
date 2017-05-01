@@ -86,25 +86,15 @@ class CRM_Mafsepa_APIWrapper implements API_Wrapper {
    * @param $result
    */
   private function updateTxGroup($result) {
-    // get the sdd creditor of the tx group
-    try {
-      $creditorId = civicrm_api3('SepaTransactionGroup', 'getvalue', array(
-        'id' => $result['id'],
-        'return' => 'sdd_creditor_id'
-      ));
-      // update the reference and type of the transaction group for MAF Norge
-      if (isset($result['id']) && !empty($result['id'])) {
-        $config = CRM_Mafsepa_Config::singleton();
-        $txGroupReference = $config->getMafTxGroupReference().'-'.$creditorId.'-'.date('Y-m-d');
-        $sql = 'UPDATE civicrm_sdd_txgroup SET reference = %1, type = %2 WHERE id = %3';
-        $sqlParams = array(
-          1 => array($txGroupReference, 'String'),
-          2 => array('OCR', 'String'),
-          3 => array($result['id'], 'Integer')
-        );
-        CRM_Core_DAO::executeQuery($sql, $sqlParams);
-      }
-    } catch (CiviCRM_API3_Exception $ex) {}
+    // update the type of the transaction group for MAF Norge
+    if (isset($result['id']) && !empty($result['id'])) {
+      $sql = 'UPDATE civicrm_sdd_txgroup SET type = %1 WHERE id = %2';
+      $sqlParams = array(
+        1 => array('OCR', 'String'),
+        2 => array($result['id'], 'Integer')
+      );
+      CRM_Core_DAO::executeQuery($sql, $sqlParams);
+    }
   }
 
 }

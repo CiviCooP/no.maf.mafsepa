@@ -549,11 +549,13 @@ class CRM_Mafsepa_AvtaleGiro {
         $details = array(
           'contribution id' => $contribution['id'],
           'campaign id' => $contribution['contribution_campaign_id'],
-          'receive date' => $contribution['receive date'],
           'amount' => $contribution['total_amount'],
           'contact id' => $contribution['contact_id'],
           'maximum amount contract' => $avtaleGiroContract['max_amount']
         );
+        if (isset($contribution['receive_date'])) {
+          $details['receive date'] = $contribution['receive_date'];
+        }
         $this->createActivity('error', $message, $details);
         return FALSE;
       }
