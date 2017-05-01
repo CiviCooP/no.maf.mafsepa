@@ -7,6 +7,12 @@
     <access_arguments>access CiviCRM</access_arguments>
   </item>
   <item>
+    <path>civicrm/mafsepa/deletegroup</path>
+    <page_callback>CRM_Mafsepa_Page_DeleteGroup</page_callback>
+    <title>DeleteGroup</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
+  <item>
     <path>civicrm/sepa</path>
     <page_callback>CRM_Mafsepa_Page_DashBoard</page_callback>
     <title>AvtaleGiro Dashboard</title>
