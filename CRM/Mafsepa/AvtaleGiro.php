@@ -309,7 +309,7 @@ class CRM_Mafsepa_AvtaleGiro {
     $result = array();
     if (!empty($contactId)) {
       $result = array();
-      $sql = "SELECT a.entity_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
+      $sql = "SELECT r.id AS recur_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
         r.start_date, r.end_date, s.is_enabled, s.reference AS kid, a.maf_maximum_amount, a.maf_notification_bank, r.cycle_day, 
         s.id AS mandate_id, r.contact_id
         FROM civicrm_contribution_recur r 
@@ -324,7 +324,7 @@ class CRM_Mafsepa_AvtaleGiro {
       $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
       while ($dao->fetch()) {
         $avtaleGiro = array(
-          'recur_id' => $dao->entity_id,
+          'recur_id' => $dao->recur_id,
           'contact_id' => $dao->contact_id,
           'kid' => $dao->kid,
           'campaign' => $dao->campaign,
@@ -358,7 +358,7 @@ class CRM_Mafsepa_AvtaleGiro {
     $result = array();
     if (!empty($recurId)) {
       $result = array();
-      $sql = "SELECT a.entity_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
+      $sql = "SELECT r.id AS recur_id, c.title AS campaign, r.campaign_id, r.amount, r.frequency_interval, r.frequency_unit, 
         r.start_date, r.end_date, s.is_enabled, s.reference AS kid, a.maf_maximum_amount, a.maf_notification_bank, r.cycle_day, 
         s.id AS mandate_id, r.contact_id
         FROM civicrm_contribution_recur r 
@@ -373,7 +373,7 @@ class CRM_Mafsepa_AvtaleGiro {
       $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
       if ($dao->fetch()) {
         $result = array(
-          'recur_id' => $dao->entity_id,
+          'recur_id' => $dao->recur_id,
           'contact_id' => $dao->contact_id,
           'kid' => $dao->kid,
           'campaign' => $dao->campaign,

@@ -109,26 +109,27 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
    * @access public
    */
   function preProcess() {
+    $session = CRM_Core_Session::singleton();
     $requestValues = CRM_Utils_Request::exportValues();
     // if recurId is passed in request as rid, save and retrieve current avtaleGiro
     if (isset($requestValues['rid'])) {
       $this->_recurId = $requestValues['rid'];
       $avtaleGiro = new CRM_Mafsepa_AvtaleGiro();
-      // if action is delete, delete immediately and return to summary
-      if ($this->_action == CRM_Core_Action::DELETE) {
-        $avtaleGiro->deleteWithRecurringId($this->_recurId);
-        CRM_Core_Session::setStatus('Inactive Avtale Giro deleted from database', 'Avtale Giro deleted', 'success');
-        $session = CRM_Core_Session::singleton();
-        CRM_Utils_System::redirect($session->readUserContext());
-      }
       $this->_avtaleGiro = $avtaleGiro->getAvtaleGiroForRecur($this->_recurId);
       if (isset($this->_avtaleGiro['contact_id'])) {
         $this->_contactId = $this->_avtaleGiro['contact_id'];
+      }
+      // if action is delete, delete immediately and return to summary
+      if ($this->_action == CRM_Core_Action::DELETE) {
+        $this->processDelete($avtaleGiro);
       }
     } else {
       if (isset($requestValues['cid'])) {
         $this->_contactId = $requestValues['cid'];
       }
+    }
+    if (!empty($this->_contactId)) {
+      $session->pushUserContext(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&cid=' . $this->_contactId, true));
     }
     $this->_monthFrequencyUnitId = 'month';
     $this->_defaultAmount = 250;
@@ -247,7 +248,7 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       $endDate = new DateTime($this->_submitValues['end_date']);
       CRM_Core_Session::setStatus('Ended Avtale Giro for ' . $contactName.' on '.$endDate->format('d-m-Y'), 'Avtale Giro ended', 'success');
     } else {
-      if (empty($this->_avtaleGiro)) {
+      if (empty($this->_avtaleGiro) && $this->_action != CRM_Core_Action::ADD) {
         $currentAvtaleGiro = new CRM_Mafsepa_AvtaleGiro();
         $this->_avtaleGiro = $currentAvtaleGiro->getAvtaleGiroForRecur($this->_recurId);
       }
@@ -258,9 +259,10 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       if ($mandateRequired) {
         $mandateData = $this->setMandateData();
         $mandate = $this->saveSepaMandate($mandateData);
-        // set kid in add mode
+        // set kid and recurId in add mode
         if ($this->_action == CRM_Core_Action::ADD) {
           $this->_avtaleGiro['kid'] = $mandate['reference'];
+          $this->_recurId = $mandate['entity_id'];
         }
       }
       // set avtale giro data and create or update avtale giro
@@ -515,6 +517,21 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       }
     }
     return $defaults;
+  }
+
+  /**
+   * Method to process delete of avtale giro
+   *
+   * @param $avtaleGiro
+   */
+  private function processDelete($avtaleGiro) {
+    $session = CRM_Core_Session::singleton();
+    $avtaleGiro->deleteWithRecurringId($this->_recurId);
+    CRM_Core_Session::setStatus('Inactive Avtale Giro deleted from database', 'Avtale Giro deleted', 'success');
+    if (empty($this->_contactId)) {
+      $this->_contactId = $session->get('userID');
+    }
+    CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&cid=' . $this->_contactId, true));
   }
 
 }
