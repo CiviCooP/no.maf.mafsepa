@@ -2,6 +2,11 @@
 
 require_once 'mafsepa.civix.php';
 
+function mafsepa_civicrm_alterTemplateFile($formName, &$form, $context, &$tplName) {
+  if ($formName == 'CRM_Contribute_Form_ContributionView') {
+    $tplName = 'CRM/Mafsepa/Form/ContributionView.tpl';
+  }
+}
 /**
  * Method to check if the extension org.project60.sepa is installed
  *

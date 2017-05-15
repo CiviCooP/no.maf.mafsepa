@@ -36,4 +36,10 @@
     <title>AvtaleGiro</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/contact/view/contribution</path>
+    <page_callback>CRM_Mafsepa_Page_Tab</page_callback>
+    <title>MAFSepa ContributionView</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>

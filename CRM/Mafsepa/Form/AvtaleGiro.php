@@ -129,7 +129,7 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       }
     }
     if (!empty($this->_contactId)) {
-      $session->pushUserContext(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&cid=' . $this->_contactId, true));
+      $session->pushUserContext(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&selectedChild=contribute&cid=' . $this->_contactId, true));
     }
     $this->_monthFrequencyUnitId = 'month';
     $this->_defaultAmount = 250;
@@ -531,7 +531,7 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     if (empty($this->_contactId)) {
       $this->_contactId = $session->get('userID');
     }
-    CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&cid=' . $this->_contactId, true));
+    CRM_Utils_System::redirect(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&selectedChild=contribute&cid=' . $this->_contactId, true));
   }
 
 }
