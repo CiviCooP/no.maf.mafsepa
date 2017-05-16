@@ -66,7 +66,7 @@ class CRM_Mafsepa_AvtaleGiroBatching {
       INNER JOIN civicrm_contribution_recur AS rcontribution       ON mandate.entity_id = rcontribution.id
       LEFT  JOIN civicrm_contribution       AS first_contribution  ON mandate.first_contribution_id = first_contribution.id
       WHERE mandate.type = 'RCUR'
-        AND mandate.status = '$mode'
+        AND mandate.status IN ('FRST', 'RCUR')
         AND mandate.is_enabled = 1
         AND mandate.creditor_id = $creditor_id;";
     $results = CRM_Core_DAO::executeQuery($sql_query);
@@ -191,7 +191,7 @@ class CRM_Mafsepa_AvtaleGiroBatching {
         txgroup.id AS txgroup_id
       FROM civicrm_sdd_txgroup AS txgroup
       WHERE txgroup.collection_date <= '$latest_date'
-        AND txgroup.type = '$mode'
+        AND txgroup.type = 'OCR'
         AND txgroup.sdd_creditor_id = $creditor_id
         AND txgroup.status_id = $group_status_id_open;";
     $results = CRM_Core_DAO::executeQuery($sql_query);
@@ -201,7 +201,7 @@ class CRM_Mafsepa_AvtaleGiroBatching {
       $existing_groups[$collection_date] = $results->txgroup_id;
     }
     // step 6: sync calculated group structure with existing (open) groups
-    self::syncGroups($mandates_by_nextdate, $existing_groups, $mode, 'RCUR', $rcur_notice, $creditor_id);
+    self::syncGroups($mandates_by_nextdate, $existing_groups, $mode, 'OCR', $rcur_notice, $creditor_id);
 
     $lock->release();
   }
