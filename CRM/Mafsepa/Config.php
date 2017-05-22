@@ -20,6 +20,7 @@ class CRM_Mafsepa_Config {
   private $_defaultMandateStatus = NULL;
   private $_defaultMandateType = NULL;
   private $_defaultMandateCurrency = NULL;
+  private $_defaultFundraisingCampaignId = NULL;
   private $_fundraisingCampaignTypeId = NULL;
   private $_avtaleGiroCustomGroup = array();
   private $_avtaleGiroCustomFields = array();
@@ -51,9 +52,23 @@ class CRM_Mafsepa_Config {
         'name' => 'Fuel',
         'return' => 'value'
       ));
+      $this->_defaultFundraisingCampaignId = civicrm_api3('Campaign', 'getvalue', array(
+        'name' => 'maf_default_fundraising_campaign',
+        'campaign_type_id' => $this->_fundraisingCampaignTypeId,
+        'return' => 'id'
+      ));
     } catch (CiviCRM_API3_Exception $ex) {}
     // set the assignee contact for the avtale issues activity type (initially Astrid Tholvsen Kristoffersen)
     $this->setAvtaleIssueAssignee();
+  }
+
+  /**
+   * Getter for default fundraising campaign id
+   *
+   * @return mixed
+   */
+  public function getDefaultFundraisingCampaignId() {
+    return $this->_defaultFundraisingCampaignId;
   }
 
   /**
