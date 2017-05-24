@@ -89,20 +89,22 @@
 <script type="text/javascript">
   cj('.crm-contribution-type').each(function () {
     var rowId = cj(this).parent().attr("id");
-    var donVal = cj(this).html();
     var idParts = rowId.split('rowid');
     if (idParts[1]) {
       var contributionId = idParts[1];
       CRM.api3('Contribution', 'getvalue', {
         "return": "contribution_recur_id",
         "id": contributionId
-      }).done(function(data) {
+      }).done(function (data) {
         if (data.result) {
-          var newText = donVal + ' (from Avtale Giro)';
-          cj('.crm-contribution-type').html(newText);
+          cj('#' + rowId + ' td').each(function () {
+            if (this.className === 'crm-contribution-source') {
+              this.innerHTML = this.innerHTML + ' (AvtaleGiro)';
+            }
+          });
         }
       });
     }
-  })
+  });
 </script>
 {/literal}
