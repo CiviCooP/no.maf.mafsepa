@@ -36,7 +36,7 @@ function _is_sepa_installed() {
 
 function mafsepa_civicrm_pageRun($page) {
   $pageName = $page->getVar('_name');
-  if ($pageName == 'CRM_Contribute_Page_Tab') {
+  if ($pageName == 'CRM_Mafsepa_Page_Tab') {
     // add jQuery to replace Sepa button with Avtale Giro button
     CRM_Core_Region::instance('page-body')->add(array(
       'template' => 'CRM/Mafsepa/AvtaleGiroButton.tpl'));
