@@ -84,3 +84,25 @@
         {/if}
     </div>
 {/if}
+{* jQuery function to check if contribution is from AvtaleGiro and show text if yes *}
+{literal}
+<script type="text/javascript">
+  cj('.crm-contribution-type').each(function () {
+    var rowId = cj(this).parent().attr("id");
+    var donVal = cj(this).html();
+    var idParts = rowId.split('rowid');
+    if (idParts[1]) {
+      var contributionId = idParts[1];
+      CRM.api3('Contribution', 'getvalue', {
+        "return": "contribution_recur_id",
+        "id": contributionId
+      }).done(function(data) {
+        if (data.result) {
+          var newText = donVal + ' (from Avtale Giro)';
+          cj('.crm-contribution-type').html(newText);
+        }
+      });
+    }
+  })
+</script>
+{/literal}
