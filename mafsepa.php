@@ -25,6 +25,25 @@ function _is_sepa_installed() {
 }
 
 /**
+ * Implementation of civicrm_hook validateForm
+ *
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 26 May 2017
+ * @link http://wiki.civicrm.org/confluence/display/CRMDOC/hook_civicrm_pageRun
+ * @param $formName
+ * @param $fields
+ * @param $files
+ * @param $form
+ * @param $errors
+ */
+
+function mafsepa_civicrm_validateForm($formName, &$fields, &$files, &$form, &$errors) {
+  if ($formName == "CRM_Contribute_Form_Contribution") {
+    CRM_Mafsepa_Contribution::validateForm($fields, $form, $errors);
+  }
+}
+
+/**
  * Implementation of civicrm_hook pageRun
  *
  * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
@@ -42,6 +61,7 @@ function mafsepa_civicrm_pageRun($page) {
       'template' => 'CRM/Mafsepa/AvtaleGiroButton.tpl'));
   }
 }
+
 
 /**
  * Implementation of civicrm_hook apiWrappers
