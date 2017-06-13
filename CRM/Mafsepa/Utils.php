@@ -41,4 +41,21 @@ class CRM_Mafsepa_Utils {
     }
     return $text;
   }
+  /**
+   * Function to read the defaults json file
+   *
+   * @param string $fileName
+   * @return array|mixed
+   */
+  public static function readDefaultsJson($fileName) {
+    $container = CRM_Extension_System::singleton()->getFullContainer();
+    $fileName = $container->getPath('no.maf.mafsepa').'/resources/'.$fileName.'.json';
+    if (!file_exists($fileName)) {
+      CRM_Core_Session::setStatus('Could not read the defaults file from resources/'.$fileName,
+        'Error reading Defaults', 'Error');
+      return array();
+    } else {
+      return json_decode(file_get_contents($fileName), true);
+    }
+  }
 }

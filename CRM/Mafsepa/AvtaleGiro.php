@@ -40,6 +40,7 @@ class CRM_Mafsepa_AvtaleGiro {
   private $_membershipExternalRef = NULL;
   private $_defaultExternalRef = NULL;
   private $_countRecords = NULL;
+  private $_activityAssigneeId = NULL;
 
   /**
    * CRM_Mafsepa_AvtaleGiro constructor.
@@ -108,36 +109,37 @@ class CRM_Mafsepa_AvtaleGiro {
    */
   public function setOCRProperties() {
     // define OCR properties
-    $this->_netsCustomerId = '00131936';
-    $this->_netsId = '00008080';
-    $this->_formatCode = 'NY';
-    $this->_startServiceCode = '00';
-    $this->_startTransmissionType = '00';
-    $this->_startRecordType = '10';
-    $this->_endServiceCode = '00';
-    $this->_endTransmissionType = '00';
+    $ocrDefaults = CRM_Mafsepa_Utils::readDefaultsJson('ocr_export_defaults');
+    $this->_netsCustomerId = $ocrDefaults['nets_customer_id'];
+    $this->_netsId = $ocrDefaults['nets_id'];
+    $this->_formatCode = $ocrDefaults['format_code'];
+    $this->_startServiceCode = $ocrDefaults['start_service_code'];
+    $this->_startTransmissionType = $ocrDefaults['start_transmission_type'];
+    $this->_startRecordType = $ocrDefaults['start_record_type'];
+    $this->_endServiceCode = $ocrDefaults['end_service_code'];
+    $this->_endTransmissionType = $ocrDefaults['end_transmission_type'];
     $this->_fileLines = array();
     $this->_transmissionNumber = date('dmy') . '7';
     $this->_assignmentNumber = str_pad(date('d', strtotime('+1 day'))
       .date('m', strtotime('+12 months')).'16','7','0', STR_PAD_LEFT);
-    $this->_assignmentAccount = '70586360610';
-    $this->_avtaleGiroServiceCode = '21';
-    $this->_assignmentRecordType = '20';
+    $this->_assignmentAccount = $ocrDefaults['assignment_account'];
+    $this->_avtaleGiroServiceCode = $ocrDefaults['avtale_giro_service_code'];
+    $this->_assignmentRecordType = $ocrDefaults['assignment_record_type'];
     $this->_assignmentCount = 0;
     $this->_assignmentTotal = 0;
     $this->_transactionNumber = 0;
-    $this->_withNotificationTransactionType = '21';
-    $this->_withoutNotificationTransactionType = '02';
-    $this->_firstContributionLineRecordType = '30';
-    $this->_secondContributionLineRecordType = '31';
-    $this->_endAssignmentLineRecordType = '88';
-    $this->_endRecordType = '89';
-    $this->_defaultExternalRef = 'MAF Norge';
-    $this->_membershipExternalRef = 'Medlemskap';
+    $this->_withNotificationTransactionType = $ocrDefaults['with_notification_transaction_type'];
+    $this->_withoutNotificationTransactionType = $ocrDefaults['without_notification_transaction_type'];
+    $this->_firstContributionLineRecordType = $ocrDefaults['first_contribution_line_record_type'];
+    $this->_secondContributionLineRecordType = $ocrDefaults['second_contribution_line_record_type'];
+    $this->_endAssignmentLineRecordType = $ocrDefaults['end_assignment_line_record_type'];
+    $this->_endRecordType = $ocrDefaults['end_record_type'];
+    $this->_defaultExternalRef = $ocrDefaults['default_external_ref'];
+    $this->_membershipExternalRef = $ocrDefaults['membersip_external_ref'];
     $this->_countRecords = 0;
     $this->_fileCount = 0;
     $this->_fileTotal = 0;
-
+    $this->_activityAssigneeId = $ocrDefaults['activity_assignee_id'];
   }
 
 
@@ -225,7 +227,8 @@ class CRM_Mafsepa_AvtaleGiro {
     $activity->create(array(
       'subject' => 'OCR Export '.ucfirst($type),
       'message' => $message,
-      'details' => $details
+      'details' => $details,
+      'assignee_id' => $this->_activityAssigneeId,
     ));
   }
 

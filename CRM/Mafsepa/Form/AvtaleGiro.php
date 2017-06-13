@@ -9,10 +9,8 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
   private $_bankAccountList = array();
   private $_contactId = NULL;
   private $_frequencyUnitList = array();
-  private $_monthFrequencyUnitId = NULL;
   private $_campaignList = array();
   private $_collectionDaysList = array();
-  private $_defaultAmount = NULL;
   private $_recurId = NULL;
   private $_avtaleGiro = array();
 
@@ -131,8 +129,6 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     if (!empty($this->_contactId)) {
       $session->pushUserContext(CRM_Utils_System::url('civicrm/contact/view', 'reset=1&selectedChild=contribute&cid=' . $this->_contactId, true));
     }
-    $this->_monthFrequencyUnitId = 'month';
-    $this->_defaultAmount = 250;
     $contactName = NULL;
     switch ($this->_action) {
       case CRM_Core_Action::ADD:
@@ -471,14 +467,17 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     $defaults['contact_id'] = $this->_contactId;
     $defaults['recur_id'] = $this->_recurId;
     $now = new DateTime();
+    $avtaleDefaults = CRM_Mafsepa_Utils::readDefaultsJson('avtale_defaults');
     // defaults for add
     if ($this->_action == CRM_Core_Action::ADD) {
+      $defaults['campaign_id'] = $avtaleDefaults['campaign_id'];
       $defaults['start_date'] = $now->format('Y-m-d');
-      $defaults['max_amount'] = $this->_defaultAmount;
-      $defaults['amount'] = $this->_defaultAmount;
-      $defaults['frequency_interval'] = 1;
-      $defaults['frequency_unit_id'] = $this->_monthFrequencyUnitId;
-      $defaults['notification'] = 0;
+      $defaults['max_amount'] = $avtaleDefaults['max_amount'];
+      $defaults['amount'] = $avtaleDefaults['amount'];
+      $defaults['frequency_interval'] = $avtaleDefaults['frequency_interval'];
+      $defaults['frequency_unit_id'] = $avtaleDefaults['frequency_unit'];
+      $defaults['notification'] = $avtaleDefaults['notification'];
+      $defaults['cycle_day'] = $avtaleDefaults['cycle_day'];
     }
     // defaults for edit
     if ($this->_action == CRM_Core_Action::UPDATE) {
@@ -492,32 +491,32 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
       if (isset($this->_avtaleGiro['max_amount'])) {
         $defaults['max_amount'] = $this->_avtaleGiro['max_amount'];
       } else {
-        $defaults['max_amount'] = $this->_defaultAmount;
+        $defaults['max_amount'] = $avtaleDefaults['max_amount'];
       }
       if (isset($this->_avtaleGiro['amount'])) {
         $defaults['amount'] = $this->_avtaleGiro['amount'];
       } else {
-        $defaults['amount'] = $this->_defaultAmount;
+        $defaults['amount'] = $avtaleDefaults['amount'];
       }
       if (isset($this->_avtaleGiro['frequency_interval'])) {
         $defaults['frequency_interval'] = $this->_avtaleGiro['frequency_interval'];
       } else {
-        $defaults['frequency_interval'] = 1;
+        $defaults['frequency_interval'] = $avtaleDefaults['frequency_interval'];
       }
       if (isset($this->_avtaleGiro['frequency_unit'])) {
         $defaults['frequency_unit_id'] = $this->_avtaleGiro['frequency_unit'];
       } else {
-        $defaults['frequency_unit_id'] = $this->_monthFrequencyUnitId;
+        $defaults['frequency_unit_id'] = $avtaleDefaults['frequency_unit'];
       }
       if (isset($this->_avtaleGiro['notification'])) {
         $defaults['notification'] = $this->_avtaleGiro['notification'];
       } else {
-        $defaults['notification'] = 0;
+        $defaults['notification'] = $avtaleDefaults['notification'];
       }
       if (isset($this->_avtaleGiro['cycle_day'])) {
         $defaults['cycle_day'] = CRM_Utils_Array::key($this->_avtaleGiro['cycle_day'], $this->_collectionDaysList);
       } else {
-        $defaults['cycle_day'] = array_shift($this->_collectionDaysList);
+        $defaults['cycle_day'] = $avtaleDefaults['cycle_day'];
       }
     }
     return $defaults;

@@ -8,11 +8,10 @@
 class CRM_Mafsepa_Form_AvtaleDefaults extends CRM_Core_Form {
 
   private $_frequencyUnitList = array();
-  private $_monthFrequencyUnitId = NULL;
   private $_campaignList = array();
   private $_collectionDaysList = array();
   private $_employeesList = array();
-  private $_defaultAmount = NULL;
+  private $_avtaleDefaultValues = array();
 
   /**
    * Method to set the list of employees
@@ -110,6 +109,15 @@ class CRM_Mafsepa_Form_AvtaleDefaults extends CRM_Core_Form {
     $this->setCampaignList();
     $this->setCollectionDaysList();
     $this->setEmployeesList();
+    $this->_avtaleDefaultValues = array(
+      'default_campaign_id' => 'campaign_id',
+      'default_max_amount' => 'max_amount',
+      'default_amount' => 'amount',
+      'default_cycle_day' => 'cycle_day',
+      'default_frequency_interval' => 'frequency_interval',
+      'default_frequency_unit_id' => 'frequency_unit',
+      'default_notification' => 'notification',
+    );
   }
 
   /**
@@ -123,7 +131,7 @@ class CRM_Mafsepa_Form_AvtaleDefaults extends CRM_Core_Form {
     $this->add('select', 'default_cycle_day', ts('Default Collection Day'), $this->_collectionDaysList, TRUE);
     $this->add('text', 'default_frequency_interval', ts('Default Every'), array(), TRUE);
     $this->add('select', 'default_frequency_unit_id', ts('Default Frequency'), $this->_frequencyUnitList, TRUE);
-    $this->addCheckBox('notification', ts('Default Notification to Bank'), array('' => '0'), NULL , NULL, FALSE);
+    $this->addCheckBox('default_notification', ts('Default Notification to Bank'), array('' => '0'), NULL , NULL, FALSE);
     // add form elements for ocr export defaults
     $this->add('text', 'nets_customer_id', ts('NETS Customer ID'), array(), TRUE);
     $this->add('text', 'nets_id', ts('NETS ID'), array(), TRUE);
@@ -182,7 +190,75 @@ class CRM_Mafsepa_Form_AvtaleDefaults extends CRM_Core_Form {
    * Overridden parent method to process submitted form
    */
   public function postProcess() {
+    $this->saveAvtaleDefaults();
+    $this->saveOcrExportDefaults();
+    CRM_Core_Session::setStatus(ts('Avtale and OCR Export Defaults saved to JSON files in extension folder').' resources.',
+      'Defaults saved', 'success');
     parent::postProcess();
+  }
+
+  /**
+   * Method to save the ocr export defaults
+   */
+  private function saveOcrExportDefaults() {
+    $data = array();
+    $ignores = array('entryURL', 'qfKey');
+    foreach ($this->_submitValues as $submitKey => $submitValue) {
+      // if key does not exists in ignores or in avtale defaults
+      if (!in_array($submitKey, $ignores) && !array_key_exists($submitKey, $this->_avtaleDefaultValues)) {
+        // if key does not start with '_qf'
+        if (substr($submitKey, 0, 3) != '_qf') {
+          $data[$submitKey] = $submitValue;
+        }
+      }
+    }
+    if (!empty($data)) {
+      $this->saveJsonFile($data, 'ocr_export_defaults');
+    }
+  }
+
+  /**
+   * Method to save avtale defaults
+   *
+   */
+  private function saveAvtaleDefaults() {
+    $data = array();
+    foreach ($this->_avtaleDefaultValues as $key => $value) {
+      if (isset($this->_submitValues[$key])) {
+        if ($key == 'default_notification') {
+          $data[$value] = $this->_submitValues[$key][0];
+        } else {
+          $data[$value] = $this->_submitValues[$key];
+        }
+      }
+    }
+    if (!isset($data['notification'])) {
+      $data['notification'] = "0";
+    }
+    $this->saveJsonFile($data, 'avtale_defaults');
+  }
+
+  /**
+   * Method to save json file
+   *
+   * @param $data
+   * @param $fileName
+   * @throws Exception when file can not be opened for write
+   */
+  private function saveJsonFile($data, $fileName) {
+    if (!empty($data)) {
+      $container = CRM_Extension_System::singleton()->getFullContainer();
+      $fileName = $container->getPath('no.maf.mafsepa').'/resources/'.$fileName.'.json';
+      try {
+        $fh = fopen($fileName, 'w');
+        fwrite($fh, json_encode($data, JSON_PRETTY_PRINT));
+        fclose($fh);
+      } catch (Exception $ex) {
+        throw new Exception('Could not open '.$fileName.', contact your system administrator. Error reported: '
+          . $ex->getMessage());
+      }
+    }
+
   }
 
   /**
@@ -191,11 +267,37 @@ class CRM_Mafsepa_Form_AvtaleDefaults extends CRM_Core_Form {
    * @return array $defaults
    * @access public
    */
-  function setDefaultValues() {
+  public function setDefaultValues() {
     $defaults = array();
     $this->getAvtaleDefaults($defaults);
     $this->getOcrExportDefaults($defaults);
     return $defaults;
+  }
+
+  /**
+   * Method to get the ocr export defaults
+   *
+   * @param $defaults
+   */
+  private function getOcrExportDefaults(&$defaults) {
+    $ocrDefaults = CRM_Mafsepa_Utils::readDefaultsJson('ocr_export_defaults');
+    foreach ($ocrDefaults as $ocrDefaultKey => $ocrDefaultValue) {
+      $defaults[$ocrDefaultKey] = $ocrDefaultValue;
+    }
+  }
+
+  /**
+   * Method to get the defaults for avtale giro
+   *
+   * @param $defaults
+   */
+  private function getAvtaleDefaults(&$defaults) {
+    $avtaleDefaults = CRM_Mafsepa_Utils::readDefaultsJson('avtale_defaults');
+    foreach ($this->_avtaleDefaultValues as $key => $value) {
+      if (isset($avtaleDefaults[$value])) {
+        $defaults[$key] = $avtaleDefaults[$value];
+      }
+    }
   }
 
 }
