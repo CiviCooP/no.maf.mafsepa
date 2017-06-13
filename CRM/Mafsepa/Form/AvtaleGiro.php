@@ -275,6 +275,10 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     }
     parent::postProcess();
   }
+
+  /**
+   * Method to terminate the mandate
+   */
   private function terminateMandate() {
     // get mandate id with recur id - api SepaMandate does not allow getvalue with entity_id so with SQL
     $sql = 'SELECT id FROM civicrm_sdd_mandate WHERE entity_table = %1 AND entity_id = %2';

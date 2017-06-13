@@ -1,0 +1,10 @@
+{
+  "campaign_id": 7,
+  "max_amount":250.00,
+  "amount":250.00,
+  "cycle_day":2,
+  "frequency_interval":1,
+  "frequency_unit": 2,
+  "notification":0
+}
+

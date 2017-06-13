@@ -1,0 +1,23 @@
+{
+  "nets_customer_id":"00131936",
+  "nets_id":"00008080",
+  "format_code":"NY",
+  "start_service_code":"00",
+  "start_transmission_type":"00",
+  "start_record_type":"10",
+  "end_service_code":"00",
+  "end_transmission_type":"00",
+  "assignment_account":"70586360610",
+  "avtale_giro_service_code":"21",
+  "assignment_record_type":"20",
+  "with_notification_transaction_type":"21",
+  "without_notification_transaction_type":"02",
+  "first_contribution_line_record_type":"30",
+  "second_contribution_line_record_type":"31",
+  "end_assignment_line_record_type":"88",
+  "end_record_type":"89",
+  "default_external_ref":"MAF Norge",
+  "membership_external_ref":"Medlemskap",
+  "activity_assignee_id":7282
+}
+

@@ -42,4 +42,11 @@
     <title>MAFSepa ContributionView</title>
     <access_arguments>access CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/mafsepa/form/avtaledefaults</path>
+    <page_callback>CRM_Mafsepa_Form_AvtaleDefaults</page_callback>
+    <title>AvtaleDefaults</title>
+    <access_arguments>access CiviCRM</access_arguments>
+    <access_arguments>administer CiviCRM</access_arguments>
+  </item>
 </menu>
