@@ -251,6 +251,12 @@ class CRM_Mafsepa_AvtaleGiro {
    */
   private function checkEarliestAndLatestDate($inDate) {
     $testingDate = new DateTime($inDate);
+    if (empty($this->_earliestDate)) {
+      $this->_earliestDate = $inDate;
+    }
+    if (empty($this->_latestDate)) {
+      $this->_latestDate = $inDate;
+    }
     $earliestDate = new DateTime($this->_earliestDate);
     $latestDate = new DateTime($this->_latestDate);
     if ($testingDate < $earliestDate) {
