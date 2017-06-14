@@ -2,6 +2,72 @@
 
 require_once 'mafsepa.civix.php';
 
+/**
+ * Implementation of banking_civicrm_navigationMenu
+ *
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 14 June 2017
+ * @link https://docs.civicrm.org/dev/en/master/hooks/hook_civicrm_navigationMenu/
+ * @param $params
+ */
+function mafsepa_civicrm_navigationMenu(&$params) {
+  //add menu entries for Import settings to Administer/CiviContribute menu
+  $avtaleDefaultsUrl = 'civicrm/mafsepa/form/avtaledefaults';
+  $ocrExportSettingsUrl = 'civicrm/mafsepa/form/ocrexportsettings';
+  // now, by default we want to add it to the Administer/CiviContribute menu -> find it
+  $administerMenuId = 0;
+  $administerCiviContributeMenuId = 0;
+  foreach ($params as $key => $value) {
+    if ($value['attributes']['name'] == 'Administer') {
+      $administerMenuId = $key;
+      foreach ($params[$administerMenuId]['child'] as $childKey => $childValue) {
+        if ($childValue['attributes']['name'] == 'CiviContribute') {
+          $administerCiviContributeMenuId = $childKey;
+          break;
+        }
+      }
+      break;
+    }
+  }
+  if (empty($administerMenuId)) {
+    error_log('no.maf.mafsepa: Cannot find parent menu Administer/CiviContribute for '.$avtaleDefaultsUrl. ' and '. $ocrExportSettingsUrl);
+  } else {
+    $avtaleDefaultsMenu = array (
+      'label' => ts('Avtale Giro Defaults',array('domain' => 'no.maf.mafsepa')),
+      'name' => 'Avtale Giro Defaults',
+      'url' => $avtaleDefaultsUrl,
+      'permission' => 'administer CiviCRM',
+      'operator' => NULL,
+      'parentID' => $administerCiviContributeMenuId,
+      'navID' => CRM_Mafsepa_Utils::createUniqueNavID($params[$administerMenuId]['child']),
+      'active' => 1
+    );
+    CRM_Mafsepa_Utils::addNavigationMenuEntry($params[$administerMenuId]['child'][$administerCiviContributeMenuId], $avtaleDefaultsMenu);
+    $ocrExportSettingsMenu = array (
+      'label' => ts('OCR Export Settings',array('domain' => 'no.maf.mafsepa')),
+      'name' => 'OCR Export Settings',
+      'url' => $ocrExportSettingsUrl,
+      'permission' => 'administer CiviCRM',
+      'operator' => NULL,
+      'parentID' => $administerCiviContributeMenuId,
+      'navID' => CRM_Mafsepa_Utils::createUniqueNavID($params[$administerMenuId]['child']),
+      'active' => 1
+    );
+    CRM_Mafsepa_Utils::addNavigationMenuEntry($params[$administerMenuId]['child'][$administerCiviContributeMenuId], $ocrExportSettingsMenu);
+  }
+}
+
+/**
+ * Implementation of hook_civicrm_alterTemplateFile
+ *
+ * @author Erik Hommel (CiviCooP) <erik.hommel@civicoop.org>
+ * @date 14 June 2017
+ * @param $formName
+ * @param $form
+ * @param $context
+ * @param $tplName
+ * @link https://docs.civicrm.org/dev/en/master/hooks/hook_civicrm_alterTemplateFile/
+ */
 function mafsepa_civicrm_alterTemplateFile($formName, &$form, $context, &$tplName) {
   if ($formName == 'CRM_Contribute_Form_ContributionView') {
     $tplName = 'CRM/Mafsepa/Form/ContributionView.tpl';

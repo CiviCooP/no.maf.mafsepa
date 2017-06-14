@@ -49,4 +49,10 @@
     <access_arguments>access CiviCRM</access_arguments>
     <access_arguments>administer CiviCRM</access_arguments>
   </item>
+  <item>
+    <path>civicrm/mafsepa/form/ocrexportsettings</path>
+    <page_callback>CRM_Mafsepa_Form_OcrExportSettings</page_callback>
+    <title>OcrExportSettings</title>
+    <access_arguments>access CiviCRM</access_arguments>
+  </item>
 </menu>
