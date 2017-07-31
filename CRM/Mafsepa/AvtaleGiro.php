@@ -109,7 +109,7 @@ class CRM_Mafsepa_AvtaleGiro {
    */
   public function setOCRProperties() {
     // define OCR properties
-    $ocrDefaults = CRM_Mafsepa_Utils::readDefaultsJson('ocr_export_defaults');
+    $ocrDefaults = CRM_Mafsepa_Utils::readDefaultsJson('ocr_export_settings');
     $this->_netsCustomerId = $ocrDefaults['nets_customer_id'];
     $this->_netsId = $ocrDefaults['nets_id'];
     $this->_formatCode = $ocrDefaults['format_code'];
@@ -135,7 +135,7 @@ class CRM_Mafsepa_AvtaleGiro {
     $this->_endAssignmentLineRecordType = $ocrDefaults['end_assignment_line_record_type'];
     $this->_endRecordType = $ocrDefaults['end_record_type'];
     $this->_defaultExternalRef = $ocrDefaults['default_external_ref'];
-    $this->_membershipExternalRef = $ocrDefaults['membersip_external_ref'];
+    $this->_membershipExternalRef = $ocrDefaults['membership_external_ref'];
     $this->_countRecords = 0;
     $this->_fileCount = 0;
     $this->_fileTotal = 0;
