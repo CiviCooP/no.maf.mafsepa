@@ -67,7 +67,7 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
   private function setFrequencyUnitList() {
     try {
       $optionValues = civicrm_api3('OptionValue', 'get', array(
-        'option_group_id' => 'sector',
+        'option_group_id' => 'recur_frequency_units',
         'is_active' => 1,
         'options' > array('limit' => 0),
       ));
