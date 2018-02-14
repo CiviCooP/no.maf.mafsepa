@@ -158,7 +158,7 @@ class CRM_Mafsepa_AvtaleGiro {
         'return' => 'id'));
       $this->writeFileStartLine();
       // get all contributions in transaction group
-      $txContributions = civicrm_api3('SepaContributionGroup', 'get', array('txgroup_id' => $txGroupId));
+      $txContributions = civicrm_api3('SepaContributionGroup', 'get', array('txgroup_id' => $txGroupId, 'options' => array('limit' => 0)));
       if (!empty($txContributions['values'])) {
         // start assignment for contributions
         $this->writeAssignmentStartLine();

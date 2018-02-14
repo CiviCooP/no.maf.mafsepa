@@ -1,8 +1,8 @@
 {
-    "campaign_id": "8",
-    "max_amount": "250",
+    "campaign_id": "1",
+    "max_amount": "1000",
     "amount": "250",
-    "cycle_day": "20",
+    "cycle_day": "21",
     "frequency_interval": "1",
     "frequency_unit": "month",
     "notification": "0"
