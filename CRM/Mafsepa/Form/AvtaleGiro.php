@@ -378,8 +378,9 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     catch (CiviCRM_API3_Exception $ex) {
       $kid['kid_number'] = 'temp_kid';
     }
+
     $mandateData = array(
-      'creditor_id' => $creditor->creditor_id,
+      'creditor_id' => $creditor->id,
       'contact_id' => $this->_contactId,
       'financial_type_id' => $config->getDefaultMandateFinancialTypeId(),
       'status' => $config->getDefaultMandateStatus(),
