@@ -49,7 +49,7 @@ class CRM_Mafsepa_Config {
       ));
       $this->_fundraisingCampaignTypeId = civicrm_api3('OptionValue', 'getvalue', array(
         'option_group_id' => 'campaign_type',
-        'name' => 'Fuel',
+        'name' => 'fundraising_campaign',
         'return' => 'value'
       ));
       $this->_defaultFundraisingCampaignId = civicrm_api3('Campaign', 'getvalue', array(
