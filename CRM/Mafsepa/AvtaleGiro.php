@@ -430,7 +430,6 @@ class CRM_Mafsepa_AvtaleGiro {
     $contributionAmount = str_pad((float) $contribution['total_amount'] * 100, 17, 0, STR_PAD_LEFT);
     try {
       $contributionKid = civicrm_api3('Kid', 'generate', array(
-        'contribution_id' => $contribution['id'],
         'campaign_id' => $contribution['contribution_campaign_id'],
         'contact_id' => $contribution['contact_id']
       ));
