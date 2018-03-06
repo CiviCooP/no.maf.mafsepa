@@ -78,7 +78,7 @@ class CRM_Mafsepa_Page_CloseGroup extends CRM_Core_Page {
         if ($requestValues['status'] == "closed" && !$isTestGroup) {
           // CLOSE THE GROUP:
           try {
-            civicrm_api3('SepaAlternativeBatching', 'close', array('txgroup_id' => $groupId));
+            civicrm_api3('SepaAlternativeBatching', 'closeocr', array('txgroup_id' => $groupId));
           } catch (CiviCRM_API3_Exception $ex) {
             CRM_Core_Session::setStatus("Cannot close group #$groupId.<br/>Error was: ".$ex->getMessage(), ts('Error', array('domain' => 'no.maf.mafsepa')), 'error');
           }

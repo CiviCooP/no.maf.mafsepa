@@ -243,17 +243,17 @@ class CRM_Mafsepa_AvtaleGiroBatching {
 
         // find unused reference
         $config = CRM_Mafsepa_Config::singleton();
-        $reference = "{$config->getMafTxGroupReference()}-${creditor_id}-${mode}-${collection_date}";
+        $reference = "{$config->getMafTxGroupReference()}-${creditor_id}-${type}-${collection_date}";
         $counter = 0;
         while (self::referenceExists($reference)) {
           $counter += 1;
-          $reference = "{$config->getMafTxGroupReference()}-${creditor_id}-${mode}-${collection_date}--".$counter;
+          $reference = "{$config->getMafTxGroupReference()}-${creditor_id}-${type}-${collection_date}--".$counter;
         }
 
         $group = civicrm_api('SepaTransactionGroup', 'create', array(
           'version'                 => 3,
           'reference'               => $reference,
-          'type'                    => $mode,
+          'type'                    => $type,
           'collection_date'         => $collection_date,
           'latest_submission_date'  => date('Y-m-d', strtotime("-$notice days", strtotime($collection_date))),
           'created_date'            => date('Y-m-d'),
@@ -325,35 +325,8 @@ class CRM_Mafsepa_AvtaleGiroBatching {
         }
       }
     }
-
-    // CLEANUP: remove nonexisting contributions from groups
-    CRM_Core_DAO::executeQuery("
-      DELETE FROM civicrm_sdd_contribution_txgroup 
-      WHERE contribution_id NOT IN (SELECT id FROM civicrm_contribution);");
-
-    // CLEANUP: delete empty groups
-    $empty_group_query = CRM_Core_DAO::executeQuery("
-      SELECT id, sdd_file_id 
-      FROM civicrm_sdd_txgroup 
-      WHERE type = '$mode'
-        AND status_id = $group_status_id_open
-        AND id NOT IN (SELECT txgroup_id FROM civicrm_sdd_contribution_txgroup);");
-    while ($empty_group_query->fetch()) {
-      if (!in_array($empty_group_query->id, $existing_groups))
-        array_push($existing_groups, $empty_group_query->id);
-      if ($empty_group_query->sdd_file_id) {
-        error_log("org.project60.sepa: WARNING: txgroup ".$empty_group_query->id." should be deleted, but already has a file. Trouble ahead.");
-      }
-    }
-
-    // now, use the API to delete all these groups
-    foreach ($existing_groups as $group_id) {
-      CRM_Core_DAO::executeQuery("DELETE FROM civicrm_sdd_contribution_txgroup WHERE txgroup_id=$group_id;");
-      $result = civicrm_api('SepaTransactionGroup', 'delete', array('version' => 3, 'id' => $group_id));
-      if (isset($result['is_error']) && $result['is_error']) {
-        error_log("org.project60.sepa: Cannot delete txgroup ".$group_id.". Error was ".$result['error_message']);
-      }
-    }
+    
+    CRM_Mafsepa_Logic_Group::cleanup($type);
   }
 
 }

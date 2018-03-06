@@ -70,10 +70,25 @@ class CRM_Mafsepa_APIWrapper implements API_Wrapper {
         // update reference and filename of sdd file
         $config = CRM_Mafsepa_Config::singleton();
         $ocrReference = $config->getOcrFileReference().$txGroupReference;
-        $ocrFileName = $ocrReference.'.ocr';
+				
+				// find an available txgroup reference
+	      $name = $ocrReference;
+				$available_name = $ocrReference;
+	      $counter = 1;
+	      $test_sql = "SELECT id FROM civicrm_sdd_file WHERE reference='%s';";
+	      while (CRM_Core_DAO::executeQuery(sprintf($test_sql, $available_name))->fetch()) {
+	        // i.e. available_name is already taken, modify it
+	        $available_name = $name.'--'.$counter;
+	        $counter += 1;
+	        if ($counter>1000) {
+	          throw new Exception("Cannot create file! Unable to find an available file reference.");
+	        }
+	      }
+				
+        $ocrFileName = $available_name.'.ocr';
         $sql = "UPDATE civicrm_sdd_file SET reference = %1, filename = %2 WHERE id = %3";
         $sqlParams = array(
-          1 => array($ocrReference, 'String'),
+          1 => array($available_name, 'String'),
           2 => array($ocrFileName, 'String'),
           3 => array($params['sdd_file_id'], 'Integer')
         );
