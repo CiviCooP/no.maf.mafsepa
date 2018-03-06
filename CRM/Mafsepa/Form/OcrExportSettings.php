@@ -45,8 +45,8 @@ class CRM_Mafsepa_Form_OcrExportSettings extends CRM_Core_Form {
           'return' => 'display_name',
         ));
         $this->_employeesList[1] = $contactName;
-        CRM_Core_Session::setStatus(ts('No MAF Norge employees found, default organization used. Add employee relationships for MAF employees!', 'No MAF emplyees found',
-          'alert'));
+        CRM_Core_Session::setStatus(ts('No MAF Norge employees found, default organization used. Add employee relationships for MAF employees!'), ts('No MAF emplyees found'),
+          'alert');
       }
       catch (CiviCRM_API3_Exception $ex) {
         throw new Exception('Could not find contact 1 in '.__METHOD__
