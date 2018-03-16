@@ -31,7 +31,6 @@
   {strip}
     <table class="selector row-highlight">
       <tr class="columnheader">
-        <th scope="col">{ts}KID{/ts}</th>
         <th scope="col">{ts}Campaign{/ts}</th>
         <th scope="col">{ts}Amount{/ts}</th>
         <th scope="col">{ts}Max Amount{/ts}</th>
@@ -45,7 +44,6 @@
       </tr>
       {foreach from=$avtale.values item=avtalegiro}
         <tr id="contribution_recur-{$avtalegiro.recur_id}" data-action="cancel" class="crm-entity {cycle values="even-row,odd-row"}{if NOT $avtalegiro.status} disabled{/if}">
-          <td>{$avtalegiro.kid}</td>
           <td>{$avtalegiro.campaign}</td>
           <td>{$avtalegiro.amount|crmMoney:"NOK"}</td>
           <td>{$avtalegiro.max_amount|crmMoney:"NOK"}</td>

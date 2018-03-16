@@ -332,10 +332,11 @@ class CRM_Mafsepa_AvtaleGiro {
       );
       $dao = CRM_Core_DAO::executeQuery($sql, $sqlParams);
       while ($dao->fetch()) {
+      	$kid = civicrm_api3('Kid', 'generate', array('contact_id' => $dao->contact_id, 'campaign_id' => $dao->campaign_id, 'store' => false));
         $avtaleGiro = array(
           'recur_id' => $dao->recur_id,
           'contact_id' => $dao->contact_id,
-          'kid' => $dao->kid,
+          'kid' => $kid['kid_number'],
           'campaign' => $dao->campaign,
           'campaign_id' => $dao->campaign_id,
           'amount' => $dao->amount,
