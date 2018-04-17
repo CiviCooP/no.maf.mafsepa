@@ -87,7 +87,6 @@ class CRM_Mafsepa_Form_AvtaleGiro extends CRM_Core_Form {
     $config = CRM_Mafsepa_Config::singleton();
     try {
       $campaigns = civicrm_api3('Campaign', 'get', array(
-        'campaign_type_id' => $config->getFundraisingCampaignType(),
         'is_active' => 1,
         'options' => array('limit' => 0,),
       ));
