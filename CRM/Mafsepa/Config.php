@@ -204,7 +204,7 @@ class CRM_Mafsepa_Config {
   /**
    * Function to return singleton object
    *
-   * @return object $_singleton
+   * @return CRM_Mafsepa_Config
    * @access public
    * @static
    */

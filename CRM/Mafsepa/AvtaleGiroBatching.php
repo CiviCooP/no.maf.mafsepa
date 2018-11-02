@@ -29,6 +29,7 @@ class CRM_Mafsepa_AvtaleGiroBatching {
     if (empty($lock)) {
       return "Batching in progress. Please try again later.";
     }
+    $config = CRM_Mafsepa_Config::singleton();
     $horizon = (int) CRM_Sepa_Logic_Settings::getSetting("batching.RCUR.horizon", $creditor_id);
     $grace_period = (int) CRM_Sepa_Logic_Settings::getSetting("batching.RCUR.grace", $creditor_id);
     $latest_date = date('Y-m-d', strtotime("$now +$horizon days"));
@@ -140,6 +141,9 @@ class CRM_Mafsepa_AvtaleGiroBatching {
           unset($existing_contributions_by_recur_id[$recur_id]);
           $mandates_by_nextdate[$collection_date][$index]['mandate_entity_id'] = $contribution_id;
         } else {
+          if (empty($mandate['rc_financial_type_id'])) {
+            $mandate['rc_financial_type_id'] = $config->getDefaultMandateFinancialTypeId();
+          }
           // else: create it
           $contribution_data = array(
               "version"                             => 3,
