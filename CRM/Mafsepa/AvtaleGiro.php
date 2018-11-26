@@ -223,6 +223,7 @@ class CRM_Mafsepa_AvtaleGiro {
    * @param array $details
    */
   private function createActivity($type, $message, $details) {
+    CRM_Core_Session::setStatus($message."\r\n".var_export($details, true), '', 'alert');
     $activity = new CRM_Mafsepa_Activity();
     $activity->create(array(
       'subject' => 'OCR Export '.ucfirst($type),

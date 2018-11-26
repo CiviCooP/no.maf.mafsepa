@@ -5,10 +5,10 @@
     <th>{ts}Field:{/ts}</th>
     <th>{ts}Value:{/ts}</th>
   </tr>
-  {foreach from=$details item=detail}
+  {foreach from=$details key=label  item=detail}
     <tr>
-      <td>{$detail.label}</td>
-      <td>{$detail.value}</td>
+      <td>{$label}</td>
+      <td>{$detail}</td>
     </tr>
   {/foreach}
 </table>
